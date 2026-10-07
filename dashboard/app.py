@@ -136,8 +136,13 @@ default_ds_idx = all_datasets.index("data_exfiltration_attack_logs.csv") if "dat
 selected_dataset = st.sidebar.selectbox("Active Dataset", all_datasets, index=default_ds_idx)
 use_ext_window = "slow" in selected_dataset
 
-analysis_result = load_analysis(selected_dataset, use_extended_window=use_ext_window)
-incidents = analysis_result.incidents
+try:
+    analysis_result = load_analysis(selected_dataset, use_extended_window=use_ext_window)
+    incidents = analysis_result.incidents
+except Exception as e:
+    st.error(f"Error loading analysis for dataset '{selected_dataset}': {e}")
+    st.stop()
+
 
 # -----------------------------------------------------------------------------
 # 1. COMMAND CENTER
@@ -239,7 +244,8 @@ elif nav == "INCIDENTS":
         st.dataframe(pd.DataFrame(table_rows), use_container_width=True)
 
         selected_inc_id = st.selectbox("Select Incident Detail", [i.incident_id for i in incidents])
-        selected_inc = [i for i in incidents if i.incident_id == selected_inc_id][0]
+        matching_incs = [i for i in incidents if i.incident_id == selected_inc_id]
+        selected_inc = matching_incs[0] if matching_incs else incidents[0]
 
         st.markdown("---")
         st.markdown(f"#### Incident Detail: `{selected_inc.incident_id}` — {selected_inc.title}")
@@ -307,8 +313,8 @@ elif nav == "INCIDENTS":
 
         with t_actions:
             st.write("##### Safe Analyst-in-the-Loop Response Checklist")
-            for act in selected_inc.recommended_actions:
-                st.checkbox(act)
+            for idx, act in enumerate(selected_inc.recommended_actions):
+                st.checkbox(act, key=f"act_{selected_inc.incident_id}_{idx}")
 
 # -----------------------------------------------------------------------------
 # 3. ATTACK REPLAY
@@ -326,30 +332,36 @@ elif nav == "ATTACK REPLAY":
         if "replay_step" not in st.session_state:
             st.session_state.replay_step = 0
 
-        c_play, c_next, c_reset = st.columns([1, 1, 4])
-        with c_next:
-            if st.button("▶ Next Event"):
-                if st.session_state.replay_step < len(evts) - 1:
-                    st.session_state.replay_step += 1
-        with c_reset:
-            if st.button("↺ Reset"):
-                st.session_state.replay_step = 0
+        if not evts:
+            st.info("No evidence events associated with this incident.")
+        else:
+            st.session_state.replay_step = max(0, min(st.session_state.replay_step, len(evts) - 1))
 
-        curr_step = st.session_state.replay_step
-        sub_evts = evts[: curr_step + 1]
+            c_play, c_next, c_reset = st.columns([1, 1, 4])
+            with c_next:
+                if st.button("▶ Next Event"):
+                    if st.session_state.replay_step < len(evts) - 1:
+                        st.session_state.replay_step += 1
+            with c_reset:
+                if st.button("↺ Reset"):
+                    st.session_state.replay_step = 0
 
-        # Calculate incremental progression
-        progress_pct = (curr_step + 1) / max(1, len(evts))
-        st.progress(progress_pct)
+            curr_step = st.session_state.replay_step
+            sub_evts = evts[: curr_step + 1]
 
-        col_m1, col_m2, col_m3 = st.columns(3)
-        with col_m1:
-            st.metric("Timeline Step", f"{curr_step + 1} of {len(evts)}")
-        with col_m2:
-            st.metric("Current Timestamp", sub_evts[-1].timestamp.strftime("%H:%M:%S UTC"))
-        with col_m3:
-            curr_risk = min(100.0, round(25.0 * (curr_step + 1), 1))
-            st.metric("Dynamic Risk Score", f"{curr_risk} / 100")
+            # Calculate incremental progression
+            progress_pct = (curr_step + 1) / max(1, len(evts))
+            st.progress(progress_pct)
+
+            col_m1, col_m2, col_m3 = st.columns(3)
+            with col_m1:
+                st.metric("Timeline Step", f"{curr_step + 1} of {len(evts)}")
+            with col_m2:
+                ts_str = sub_evts[-1].timestamp.strftime("%H:%M:%S UTC") if sub_evts else "N/A"
+                st.metric("Current Timestamp", ts_str)
+            with col_m3:
+                curr_risk = min(100.0, round(25.0 * (curr_step + 1), 1))
+                st.metric("Dynamic Risk Score", f"{curr_risk} / 100")
 
         st.markdown("#### Chronological Event Feed")
         for i, e in enumerate(sub_evts):
@@ -369,7 +381,7 @@ elif nav == "ATTACK REPLAY":
 # -----------------------------------------------------------------------------
 elif nav == "ATTACK GRAPH":
     st.markdown("### 🕸️ Temporal Attack Graph Visualization")
-    if not incidents or not incidents[0].graph_data:
+    if not incidents or not incidents[0].graph_data or not incidents[0].graph_data.nodes:
         st.info("No attack graph available for current dataset.")
     else:
         inc = incidents[0]
@@ -447,10 +459,18 @@ elif nav == "EVIDENCE":
         st.info("No evidence items available.")
     else:
         inc = incidents[0]
-        stages_options = [s.stage_name for s in inc.attack_stages if s.status == "confirmed"] or ["All Stages"]
-        selected_stg = st.selectbox("Filter by Confirmed Attack Stage", ["All Stages"] + stages_options)
+        confirmed_stgs = sorted(list({s.stage_name for s in inc.attack_stages if s.status == "confirmed" and s.stage_name}))
+        stages_options = ["All Stages"] + [s for s in confirmed_stgs if s != "All Stages"]
+        selected_stg = st.selectbox("Filter by Confirmed Attack Stage", stages_options)
 
-        for evd in inc.evidence_items:
+        displayed_items = inc.evidence_items
+        if selected_stg != "All Stages":
+            matching_stages = [s for s in inc.attack_stages if s.stage_name == selected_stg]
+            if matching_stages and matching_stages[0].evidence_event_ids:
+                stg_evts = set(matching_stages[0].evidence_event_ids)
+                displayed_items = [e for e in inc.evidence_items if e.event_id in stg_evts]
+
+        for evd in displayed_items:
             st.markdown(f"#### Evidence Record: `{evd.evidence_id}`")
             st.markdown(
                 f"- **Event ID:** `{evd.event_id}`\n"
