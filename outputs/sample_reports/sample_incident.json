@@ -1,0 +1,890 @@
+{
+  "incident_id": "INC-001",
+  "title": "Data Exfiltration via Removable USB (USB-8891)",
+  "status": "ACTIVE",
+  "severity": "CRITICAL",
+  "risk_score": 100.0,
+  "confidence": 0.98,
+  "confidence_decomposition": {
+    "overall_confidence": 0.98,
+    "evidence_completeness": 1.0,
+    "entity_linkage": 1.0,
+    "temporal_consistency": 0.95,
+    "baseline_strength": 0.95,
+    "stage_coverage": 1.0,
+    "explanation": "Evidence completeness: 100%, Entity linkage: 100%, Temporal consistency: 95%, Baseline strength: 95%, Stage coverage: 100%"
+  },
+  "attack_type": "Potential Data Exfiltration / Removable Media Theft",
+  "start_time": "2026-10-12T09:15:00Z",
+  "end_time": "2026-10-12T09:34:00Z",
+  "affected_users": [
+    "U102"
+  ],
+  "affected_devices": [
+    "DEV-17"
+  ],
+  "affected_ips": [
+    "203.0.113.42"
+  ],
+  "affected_countries": [
+    "Ukraine"
+  ],
+  "affected_applications": [
+    "chrome.exe",
+    "excel.exe",
+    "explorer.exe",
+    "system"
+  ],
+  "affected_files": [
+    "/finance/payroll_2026.xlsx"
+  ],
+  "affected_usb_devices": [
+    "USB-8891"
+  ],
+  "affected_destinations": [],
+  "timeline": [
+    {
+      "event_id": "EVT-1034",
+      "timestamp": "2026-10-12T09:15:00+00:00",
+      "event_type": "login_success",
+      "user": "U102",
+      "device": "DEV-17",
+      "detail": "203.0.113.42"
+    },
+    {
+      "event_id": "EVT-1042",
+      "timestamp": "2026-10-12T09:25:00+00:00",
+      "event_type": "file_access",
+      "user": "U102",
+      "device": "DEV-17",
+      "detail": "/finance/payroll_2026.xlsx"
+    },
+    {
+      "event_id": "EVT-1047",
+      "timestamp": "2026-10-12T09:31:00+00:00",
+      "event_type": "usb_connected",
+      "user": "U102",
+      "device": "DEV-17",
+      "detail": "USB-8891"
+    },
+    {
+      "event_id": "EVT-1050",
+      "timestamp": "2026-10-12T09:34:00+00:00",
+      "event_type": "usb_file_copy",
+      "user": "U102",
+      "device": "DEV-17",
+      "detail": "/finance/payroll_2026.xlsx"
+    }
+  ],
+  "attack_stages": [
+    {
+      "stage_id": "STG-01",
+      "stage_name": "Initial Access",
+      "status": "confirmed",
+      "confidence": 0.92,
+      "summary": "Authentication from unfamiliar external IP/country outside user baseline",
+      "evidence_event_ids": [
+        "EVT-1034"
+      ],
+      "evidence_strength": 0.95,
+      "explanation": "Authentication observed for U102 with verified anomalous attributes.",
+      "supporting_signals": [
+        "unusual_country_login",
+        "new_ip_login"
+      ],
+      "contradictory_signals": [],
+      "missing_evidence": []
+    },
+    {
+      "stage_id": "STG-03",
+      "stage_name": "Discovery",
+      "status": "insufficient evidence",
+      "confidence": 0.1,
+      "summary": "Insufficient evidence to classify this as a confirmed attack stage.",
+      "evidence_event_ids": [],
+      "evidence_strength": 0.0,
+      "explanation": "Insufficient evidence to classify this as a confirmed attack stage.",
+      "supporting_signals": [],
+      "contradictory_signals": [],
+      "missing_evidence": [
+        "Command-line process telemetry",
+        "Rapid directory listing events"
+      ]
+    },
+    {
+      "stage_id": "STG-04",
+      "stage_name": "Collection",
+      "status": "confirmed",
+      "confidence": 0.93,
+      "summary": "First-time or unauthorized access to sensitive file (/finance/payroll_2026.xlsx)",
+      "evidence_event_ids": [
+        "EVT-1042"
+      ],
+      "evidence_strength": 0.95,
+      "explanation": "File /finance/payroll_2026.xlsx classified as HIGH was accessed by U102.",
+      "supporting_signals": [
+        "sensitive_file_first_access"
+      ],
+      "contradictory_signals": [],
+      "missing_evidence": []
+    },
+    {
+      "stage_id": "STG-05",
+      "stage_name": "Exfiltration",
+      "status": "confirmed",
+      "confidence": 0.96,
+      "summary": "Sensitive payroll/confidential file copied to unapproved USB USB-8891",
+      "evidence_event_ids": [
+        "EVT-1050"
+      ],
+      "evidence_strength": 0.98,
+      "explanation": "Physical or network exfiltration of sensitive assets verified through event telemetry.",
+      "supporting_signals": [
+        "sensitive_file_usb_copy"
+      ],
+      "contradictory_signals": [],
+      "missing_evidence": []
+    },
+    {
+      "stage_id": "STG-06",
+      "stage_name": "Impact",
+      "status": "insufficient evidence",
+      "confidence": 0.05,
+      "summary": "Insufficient evidence to classify this as a confirmed attack stage.",
+      "evidence_event_ids": [],
+      "evidence_strength": 0.0,
+      "explanation": "Insufficient evidence to classify this as a confirmed attack stage.",
+      "supporting_signals": [],
+      "contradictory_signals": [],
+      "missing_evidence": [
+        "Service disruption logs",
+        "Ransomware encryption notes",
+        "Data destruction events"
+      ]
+    }
+  ],
+  "evidence_items": [
+    {
+      "evidence_id": "EVD-EVT-1034",
+      "event_id": "EVT-1034",
+      "timestamp": "2026-10-12T09:15:00Z",
+      "event_type": "login_success",
+      "user_id": "U102",
+      "device_id": "DEV-17",
+      "ip_address": "203.0.113.42",
+      "application": "chrome.exe",
+      "file_path": null,
+      "file_sensitivity": null,
+      "usb_id": null,
+      "destination_ip": null,
+      "raw_json": {
+        "event_id": "EVT-1034",
+        "timestamp": "2026-10-12T09:15:00+00:00",
+        "event_type": "login_success",
+        "user_id": "U102",
+        "user_name": "User U102",
+        "device_id": "DEV-17",
+        "device_name": "Host-DEV-17",
+        "ip_address": "203.0.113.42",
+        "country": "Ukraine",
+        "city": "Kyiv",
+        "application": "chrome.exe",
+        "file_path": "",
+        "file_sensitivity": "",
+        "usb_id": "",
+        "destination_ip": "",
+        "destination_domain": "",
+        "bytes_transferred": "",
+        "action": "login_success",
+        "status": "success"
+      },
+      "normalized_json": {
+        "event_id": "EVT-1034",
+        "timestamp": "2026-10-12T09:15:00Z",
+        "event_type": "login_success",
+        "user_id": "U102",
+        "user_name": "User U102",
+        "device_id": "DEV-17",
+        "device_name": "Host-DEV-17",
+        "ip_address": "203.0.113.42",
+        "country": "Ukraine",
+        "city": "Kyiv",
+        "application": "chrome.exe",
+        "file_path": null,
+        "file_sensitivity": null,
+        "usb_id": null,
+        "destination_ip": null,
+        "destination_domain": null,
+        "bytes_transferred": null,
+        "action": "login_success",
+        "status": "success",
+        "metadata": {},
+        "source_file": "data_exfiltration_attack_logs.csv",
+        "event_fingerprint": "2a419847a63d141e25755fd125fb2f53e3f19eab6fe066f4a5e1dde4539cfbd8",
+        "session_id": null,
+        "derived_session_id": "SESS-U102-DEV-17-002"
+      },
+      "fingerprint": "2a419847a63d141e25755fd125fb2f53e3f19eab6fe066f4a5e1dde4539cfbd8",
+      "explanation": "User U102 logged in from unfamiliar country 'Ukraine' (known: United States)",
+      "strength": 0.95
+    },
+    {
+      "evidence_id": "EVD-EVT-1042",
+      "event_id": "EVT-1042",
+      "timestamp": "2026-10-12T09:25:00Z",
+      "event_type": "file_access",
+      "user_id": "U102",
+      "device_id": "DEV-17",
+      "ip_address": "203.0.113.42",
+      "application": "excel.exe",
+      "file_path": "/finance/payroll_2026.xlsx",
+      "file_sensitivity": "HIGH",
+      "usb_id": null,
+      "destination_ip": null,
+      "raw_json": {
+        "event_id": "EVT-1042",
+        "timestamp": "2026-10-12T09:25:00+00:00",
+        "event_type": "file_access",
+        "user_id": "U102",
+        "user_name": "User U102",
+        "device_id": "DEV-17",
+        "device_name": "Host-DEV-17",
+        "ip_address": "203.0.113.42",
+        "country": "Ukraine",
+        "city": "Kyiv",
+        "application": "excel.exe",
+        "file_path": "/finance/payroll_2026.xlsx",
+        "file_sensitivity": "HIGH",
+        "usb_id": "",
+        "destination_ip": "",
+        "destination_domain": "",
+        "bytes_transferred": "",
+        "action": "file_access",
+        "status": "success"
+      },
+      "normalized_json": {
+        "event_id": "EVT-1042",
+        "timestamp": "2026-10-12T09:25:00Z",
+        "event_type": "file_access",
+        "user_id": "U102",
+        "user_name": "User U102",
+        "device_id": "DEV-17",
+        "device_name": "Host-DEV-17",
+        "ip_address": "203.0.113.42",
+        "country": "Ukraine",
+        "city": "Kyiv",
+        "application": "excel.exe",
+        "file_path": "/finance/payroll_2026.xlsx",
+        "file_sensitivity": "HIGH",
+        "usb_id": null,
+        "destination_ip": null,
+        "destination_domain": null,
+        "bytes_transferred": null,
+        "action": "file_access",
+        "status": "success",
+        "metadata": {},
+        "source_file": "data_exfiltration_attack_logs.csv",
+        "event_fingerprint": "d7ef428fce6b5b4e191c33e2d9e1b2e2c1871cdf8b89c2ba14bfdb0dbc01ecb1",
+        "session_id": null,
+        "derived_session_id": "SESS-U102-DEV-17-002"
+      },
+      "fingerprint": "d7ef428fce6b5b4e191c33e2d9e1b2e2c1871cdf8b89c2ba14bfdb0dbc01ecb1",
+      "explanation": "User U102 accessed high-sensitivity file '/finance/payroll_2026.xlsx' for the first time",
+      "strength": 0.95
+    },
+    {
+      "evidence_id": "EVD-EVT-1047",
+      "event_id": "EVT-1047",
+      "timestamp": "2026-10-12T09:31:00Z",
+      "event_type": "usb_connected",
+      "user_id": "U102",
+      "device_id": "DEV-17",
+      "ip_address": "203.0.113.42",
+      "application": "system",
+      "file_path": null,
+      "file_sensitivity": null,
+      "usb_id": "USB-8891",
+      "destination_ip": null,
+      "raw_json": {
+        "event_id": "EVT-1047",
+        "timestamp": "2026-10-12T09:31:00+00:00",
+        "event_type": "usb_connected",
+        "user_id": "U102",
+        "user_name": "User U102",
+        "device_id": "DEV-17",
+        "device_name": "Host-DEV-17",
+        "ip_address": "203.0.113.42",
+        "country": "Ukraine",
+        "city": "Kyiv",
+        "application": "system",
+        "file_path": "",
+        "file_sensitivity": "",
+        "usb_id": "USB-8891",
+        "destination_ip": "",
+        "destination_domain": "",
+        "bytes_transferred": "",
+        "action": "usb_connected",
+        "status": "success"
+      },
+      "normalized_json": {
+        "event_id": "EVT-1047",
+        "timestamp": "2026-10-12T09:31:00Z",
+        "event_type": "usb_connected",
+        "user_id": "U102",
+        "user_name": "User U102",
+        "device_id": "DEV-17",
+        "device_name": "Host-DEV-17",
+        "ip_address": "203.0.113.42",
+        "country": "Ukraine",
+        "city": "Kyiv",
+        "application": "system",
+        "file_path": null,
+        "file_sensitivity": null,
+        "usb_id": "USB-8891",
+        "destination_ip": null,
+        "destination_domain": null,
+        "bytes_transferred": null,
+        "action": "usb_connected",
+        "status": "success",
+        "metadata": {},
+        "source_file": "data_exfiltration_attack_logs.csv",
+        "event_fingerprint": "e8526ce4bfff1c3d16bf77fc73dcd8d5bffd876f35a3e747d23cb41daafca4ef",
+        "session_id": null,
+        "derived_session_id": "SESS-U102-DEV-17-002"
+      },
+      "fingerprint": "e8526ce4bfff1c3d16bf77fc73dcd8d5bffd876f35a3e747d23cb41daafca4ef",
+      "explanation": "Unapproved removable USB device 'USB-8891' connected to endpoint DEV-17",
+      "strength": 0.95
+    },
+    {
+      "evidence_id": "EVD-EVT-1050",
+      "event_id": "EVT-1050",
+      "timestamp": "2026-10-12T09:34:00Z",
+      "event_type": "usb_file_copy",
+      "user_id": "U102",
+      "device_id": "DEV-17",
+      "ip_address": "203.0.113.42",
+      "application": "explorer.exe",
+      "file_path": "/finance/payroll_2026.xlsx",
+      "file_sensitivity": "HIGH",
+      "usb_id": "USB-8891",
+      "destination_ip": null,
+      "raw_json": {
+        "event_id": "EVT-1050",
+        "timestamp": "2026-10-12T09:34:00+00:00",
+        "event_type": "usb_file_copy",
+        "user_id": "U102",
+        "user_name": "User U102",
+        "device_id": "DEV-17",
+        "device_name": "Host-DEV-17",
+        "ip_address": "203.0.113.42",
+        "country": "Ukraine",
+        "city": "Kyiv",
+        "application": "explorer.exe",
+        "file_path": "/finance/payroll_2026.xlsx",
+        "file_sensitivity": "HIGH",
+        "usb_id": "USB-8891",
+        "destination_ip": "",
+        "destination_domain": "",
+        "bytes_transferred": "2048500",
+        "action": "usb_file_copy",
+        "status": "success"
+      },
+      "normalized_json": {
+        "event_id": "EVT-1050",
+        "timestamp": "2026-10-12T09:34:00Z",
+        "event_type": "usb_file_copy",
+        "user_id": "U102",
+        "user_name": "User U102",
+        "device_id": "DEV-17",
+        "device_name": "Host-DEV-17",
+        "ip_address": "203.0.113.42",
+        "country": "Ukraine",
+        "city": "Kyiv",
+        "application": "explorer.exe",
+        "file_path": "/finance/payroll_2026.xlsx",
+        "file_sensitivity": "HIGH",
+        "usb_id": "USB-8891",
+        "destination_ip": null,
+        "destination_domain": null,
+        "bytes_transferred": 2048500,
+        "action": "usb_file_copy",
+        "status": "success",
+        "metadata": {},
+        "source_file": "data_exfiltration_attack_logs.csv",
+        "event_fingerprint": "7246c54c1f4467f2dda9ab9d1fd387dc2d744b471a435c4e47dc2a9784c9de54",
+        "session_id": null,
+        "derived_session_id": "SESS-U102-DEV-17-002"
+      },
+      "fingerprint": "7246c54c1f4467f2dda9ab9d1fd387dc2d744b471a435c4e47dc2a9784c9de54",
+      "explanation": "Unapproved removable USB device 'USB-8891' connected to endpoint DEV-17",
+      "strength": 0.95
+    }
+  ],
+  "score_breakdown": [
+    {
+      "rule_or_factor": "unusual_country_login",
+      "raw_points": 25.0,
+      "capped_points": 25.0,
+      "weight": 1.0,
+      "reason": "User U102 logged in from unfamiliar country 'Ukraine' (known: United States)",
+      "event_ids": [
+        "EVT-1034"
+      ]
+    },
+    {
+      "rule_or_factor": "new_ip_login",
+      "raw_points": 10.0,
+      "capped_points": 5.0,
+      "weight": 1.0,
+      "reason": "User U102 authenticated from previously unseen IP address '203.0.113.42' [Deduplicated: co-occurs with country anomaly on same authentication]",
+      "event_ids": [
+        "EVT-1034"
+      ]
+    },
+    {
+      "rule_or_factor": "sensitive_file_first_access",
+      "raw_points": 25.0,
+      "capped_points": 25.0,
+      "weight": 1.0,
+      "reason": "User U102 accessed high-sensitivity file '/finance/payroll_2026.xlsx' for the first time",
+      "event_ids": [
+        "EVT-1042"
+      ]
+    },
+    {
+      "rule_or_factor": "first_seen_application",
+      "raw_points": 5.0,
+      "capped_points": 5.0,
+      "weight": 1.0,
+      "reason": "Application 'excel.exe' observed for the first time for user U102",
+      "event_ids": [
+        "EVT-1042"
+      ]
+    },
+    {
+      "rule_or_factor": "unapproved_usb",
+      "raw_points": 20.0,
+      "capped_points": 20.0,
+      "weight": 1.0,
+      "reason": "Unapproved removable USB device 'USB-8891' connected to endpoint DEV-17",
+      "event_ids": [
+        "EVT-1047"
+      ]
+    },
+    {
+      "rule_or_factor": "first_seen_application",
+      "raw_points": 5.0,
+      "capped_points": 2.0,
+      "weight": 1.0,
+      "reason": "Application 'system' observed for the first time for user U102 [Diminishing contribution for repeated supportive signal]",
+      "event_ids": [
+        "EVT-1047"
+      ]
+    },
+    {
+      "rule_or_factor": "unapproved_usb",
+      "raw_points": 20.0,
+      "capped_points": 20.0,
+      "weight": 1.0,
+      "reason": "Unapproved removable USB device 'USB-8891' connected to endpoint DEV-17",
+      "event_ids": [
+        "EVT-1050"
+      ]
+    },
+    {
+      "rule_or_factor": "sensitive_file_usb_copy",
+      "raw_points": 45.0,
+      "capped_points": 45.0,
+      "weight": 1.0,
+      "reason": "High-sensitivity file '/finance/payroll_2026.xlsx' (HIGH) copied to removable USB device 'USB-8891'",
+      "event_ids": [
+        "EVT-1050"
+      ]
+    },
+    {
+      "rule_or_factor": "multi_stage_correlation_bonus",
+      "raw_points": 15.0,
+      "capped_points": 15.0,
+      "weight": 1.0,
+      "reason": "Incident spans multiple confirmed attack stages: Collection, Exfiltration, Initial Access",
+      "event_ids": []
+    }
+  ],
+  "correlation_rationale": [
+    "Event EVT-1034 -> EVT-1042: +30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +10 Same IP: 203.0.113.42; +8.3 Temporal proximity (10.0 mins apart); +15 Matches attack stage progression (login_success -> file_access) (Score: 0.71)",
+    "Event EVT-1034 -> EVT-1047: +30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +10 Same IP: 203.0.113.42; +7.3 Temporal proximity (16.0 mins apart); +15 Matches attack stage progression (login_success -> usb_connected) (Score: 0.71)",
+    "Event EVT-1034 -> EVT-1050: +30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +10 Same IP: 203.0.113.42; +6.8 Temporal proximity (19.0 mins apart); +15 Matches attack stage progression (login_success -> usb_file_copy) (Score: 0.7)",
+    "Event EVT-1042 -> EVT-1047: +30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +10 Same IP: 203.0.113.42; +9.0 Temporal proximity (6.0 mins apart); +15 Matches attack stage progression (file_access -> usb_connected) (Score: 0.72)",
+    "Event EVT-1042 -> EVT-1050: +30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +15 Same file: /finance/payroll_2026.xlsx; +10 Same IP: 203.0.113.42; +8.5 Temporal proximity (9.0 mins apart); +15 Matches attack stage progression (file_access -> usb_file_copy) (Score: 0.82)",
+    "Event EVT-1047 -> EVT-1050: +30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +20 Same USB: USB-8891; +10 Same IP: 203.0.113.42; +9.5 Temporal proximity (3.0 mins apart); +15 Matches attack stage progression (usb_connected -> usb_file_copy) (Score: 0.86)"
+  ],
+  "entity_relationships": [
+    {
+      "source_event_id": "EVT-1034",
+      "target_event_id": "EVT-1042",
+      "same_user": true,
+      "same_device": true,
+      "same_ip": true,
+      "same_application": false,
+      "same_file": false,
+      "same_usb": false,
+      "same_session": true,
+      "temporal_distance_minutes": 10.0,
+      "stage_continuity": true,
+      "total_score": 103.3,
+      "normalized_score": 0.71,
+      "explanation": "+30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +10 Same IP: 203.0.113.42; +8.3 Temporal proximity (10.0 mins apart); +15 Matches attack stage progression (login_success -> file_access)"
+    },
+    {
+      "source_event_id": "EVT-1034",
+      "target_event_id": "EVT-1047",
+      "same_user": true,
+      "same_device": true,
+      "same_ip": true,
+      "same_application": false,
+      "same_file": false,
+      "same_usb": false,
+      "same_session": true,
+      "temporal_distance_minutes": 16.0,
+      "stage_continuity": true,
+      "total_score": 102.3,
+      "normalized_score": 0.71,
+      "explanation": "+30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +10 Same IP: 203.0.113.42; +7.3 Temporal proximity (16.0 mins apart); +15 Matches attack stage progression (login_success -> usb_connected)"
+    },
+    {
+      "source_event_id": "EVT-1034",
+      "target_event_id": "EVT-1050",
+      "same_user": true,
+      "same_device": true,
+      "same_ip": true,
+      "same_application": false,
+      "same_file": false,
+      "same_usb": false,
+      "same_session": true,
+      "temporal_distance_minutes": 19.0,
+      "stage_continuity": true,
+      "total_score": 101.8,
+      "normalized_score": 0.7,
+      "explanation": "+30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +10 Same IP: 203.0.113.42; +6.8 Temporal proximity (19.0 mins apart); +15 Matches attack stage progression (login_success -> usb_file_copy)"
+    },
+    {
+      "source_event_id": "EVT-1042",
+      "target_event_id": "EVT-1047",
+      "same_user": true,
+      "same_device": true,
+      "same_ip": true,
+      "same_application": false,
+      "same_file": false,
+      "same_usb": false,
+      "same_session": true,
+      "temporal_distance_minutes": 6.0,
+      "stage_continuity": true,
+      "total_score": 104.0,
+      "normalized_score": 0.72,
+      "explanation": "+30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +10 Same IP: 203.0.113.42; +9.0 Temporal proximity (6.0 mins apart); +15 Matches attack stage progression (file_access -> usb_connected)"
+    },
+    {
+      "source_event_id": "EVT-1042",
+      "target_event_id": "EVT-1050",
+      "same_user": true,
+      "same_device": true,
+      "same_ip": true,
+      "same_application": false,
+      "same_file": true,
+      "same_usb": false,
+      "same_session": true,
+      "temporal_distance_minutes": 9.0,
+      "stage_continuity": true,
+      "total_score": 118.5,
+      "normalized_score": 0.82,
+      "explanation": "+30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +15 Same file: /finance/payroll_2026.xlsx; +10 Same IP: 203.0.113.42; +8.5 Temporal proximity (9.0 mins apart); +15 Matches attack stage progression (file_access -> usb_file_copy)"
+    },
+    {
+      "source_event_id": "EVT-1047",
+      "target_event_id": "EVT-1050",
+      "same_user": true,
+      "same_device": true,
+      "same_ip": true,
+      "same_application": false,
+      "same_file": false,
+      "same_usb": true,
+      "same_session": true,
+      "temporal_distance_minutes": 3.0,
+      "stage_continuity": true,
+      "total_score": 124.5,
+      "normalized_score": 0.86,
+      "explanation": "+30 Same user: U102; +20 Same device: DEV-17; +20 Same session: SESS-U102-DEV-17-002; +20 Same USB: USB-8891; +10 Same IP: 203.0.113.42; +9.5 Temporal proximity (3.0 mins apart); +15 Matches attack stage progression (usb_connected -> usb_file_copy)"
+    }
+  ],
+  "recommended_actions": [
+    "Verify account ownership and authentication history for U102 with data owner.",
+    "Review MFA and identity provider records for unusual token requests or geographic anomalies.",
+    "Inspect endpoint logs on DEV-17 for unauthorized process execution or staging archives.",
+    "Preserve forensic integrity: Export evidence ledger and memory artifacts before applying host remediation.",
+    "Human Approval Gate: Follow organizational incident response policy prior to session revocation or host containment.",
+    "Audit physical custody of removable storage serial number(s): USB-8891."
+  ],
+  "uncertainties": [
+    "Certain MITRE stages remain unproven due to telemetry gaps."
+  ],
+  "alternative_explanations": [
+    "Legitimate international business travel or corporate VPN usage could account for login from Ukraine.",
+    "Emergency local backup or authorized administrative file transfer could explain USB copy to USB-8891."
+  ],
+  "attack_fingerprint": "ce1ea53337d70dfedb1b7fd01b2adc8aac7415d40d0635370566200c741243fe",
+  "source_metadata": {
+    "file_name": "data_exfiltration_attack_logs.csv",
+    "size": 92489,
+    "sha256": "fb9acf6f6dad0daa768c28a09898bc871be5fcb740c02a068685ef079e3ef6bb",
+    "ingestion_timestamp": "2026-10-07T06:51:57.172559Z",
+    "analysis_run_id": "SMOKE-TEST-001",
+    "application_version": "1.0.0"
+  },
+  "attack_story": {
+    "story_id": "STORY-INC-001",
+    "headline": "Likely Sensitive Data Exfiltration Sequence: U102 on DEV-17",
+    "what_happened": "User U102 authenticated from IP 203.0.113.42 (Ukraine), which deviated from normal baseline activity. Subsequently, the same account accessed high-sensitivity file '/finance/payroll_2026.xlsx' (HIGH) for the first time. An unapproved USB device ('USB-8891') was attached to workstation DEV-17, and '/finance/payroll_2026.xlsx' was directly copied to the removable storage.",
+    "why_it_matters": "The combination of initial access anomaly, first-time sensitive asset access, and physical/network data staging presents strong indicators of unauthorized data exfiltration and potential corporate espionage.",
+    "confidence": 0.98,
+    "risk_score": 100.0,
+    "attack_stages": [
+      "Initial Access",
+      "Collection",
+      "Exfiltration"
+    ],
+    "evidence_chain": [
+      "EVT-1034: login_success at 09:15:00 UTC",
+      "EVT-1042: file_access at 09:25:00 UTC",
+      "EVT-1047: usb_connected at 09:31:00 UTC",
+      "EVT-1050: usb_file_copy at 09:34:00 UTC"
+    ],
+    "entity_relationships": [
+      "User U102 operated on Device DEV-17",
+      "Workstation DEV-17 accessed file /finance/payroll_2026.xlsx",
+      "Removable media USB-8891 connected to DEV-17"
+    ],
+    "uncertainties": [],
+    "alternative_explanations": [
+      "Authorized emergency administrative operation or sanctioned local disaster-recovery copy.",
+      "Legitimate employee travel using commercial roaming network."
+    ]
+  },
+  "counterfactuals": [
+    {
+      "removed_event_id": "EVT-1050",
+      "event_description": "usb_file_copy (/finance/payroll_2026.xlsx)",
+      "original_risk": 100.0,
+      "counterfactual_risk": 78.0,
+      "risk_delta": 22.0,
+      "original_severity": "CRITICAL",
+      "counterfactual_severity": "HIGH",
+      "affected_stages": [
+        "Exfiltration"
+      ],
+      "explanation": "Removing usb_file_copy (EVT-1050) reduces risk by 22.0 points (from 100.0 to 78.0) and shifts severity from CRITICAL to HIGH."
+    },
+    {
+      "removed_event_id": "EVT-1034",
+      "event_description": "login_success (203.0.113.42)",
+      "original_risk": 100.0,
+      "counterfactual_risk": 100.0,
+      "risk_delta": 0.0,
+      "original_severity": "CRITICAL",
+      "counterfactual_severity": "CRITICAL",
+      "affected_stages": [
+        "Initial Access"
+      ],
+      "explanation": "Removing login_success (EVT-1034) reduces risk by 0.0 points (from 100.0 to 100.0) and shifts severity from CRITICAL to CRITICAL."
+    },
+    {
+      "removed_event_id": "EVT-1042",
+      "event_description": "file_access (/finance/payroll_2026.xlsx)",
+      "original_risk": 100.0,
+      "counterfactual_risk": 100.0,
+      "risk_delta": 0.0,
+      "original_severity": "CRITICAL",
+      "counterfactual_severity": "CRITICAL",
+      "affected_stages": [
+        "Collection"
+      ],
+      "explanation": "Removing file_access (EVT-1042) reduces risk by 0.0 points (from 100.0 to 100.0) and shifts severity from CRITICAL to CRITICAL."
+    },
+    {
+      "removed_event_id": "EVT-1047",
+      "event_description": "usb_connected (USB-8891)",
+      "original_risk": 100.0,
+      "counterfactual_risk": 100.0,
+      "risk_delta": 0.0,
+      "original_severity": "CRITICAL",
+      "counterfactual_severity": "CRITICAL",
+      "affected_stages": [],
+      "explanation": "Removing usb_connected (EVT-1047) reduces risk by 0.0 points (from 100.0 to 100.0) and shifts severity from CRITICAL to CRITICAL."
+    }
+  ],
+  "graph_data": {
+    "nodes": [
+      {
+        "id": "INC-001",
+        "label": "INC-001: CRITICAL",
+        "node_type": "Incident",
+        "status": "confirmed",
+        "color": "#EF4444",
+        "metadata": {
+          "risk": 100.0,
+          "confidence": 0.98
+        }
+      },
+      {
+        "id": "USER-U102",
+        "label": "User: U102",
+        "node_type": "User",
+        "status": "suspicious",
+        "color": "#F59E0B",
+        "metadata": {}
+      },
+      {
+        "id": "DEV-DEV-17",
+        "label": "Endpoint: DEV-17",
+        "node_type": "Device",
+        "status": "suspicious",
+        "color": "#F59E0B",
+        "metadata": {}
+      },
+      {
+        "id": "IP-203.0.113.42",
+        "label": "IP: 203.0.113.42",
+        "node_type": "IP",
+        "status": "suspicious",
+        "color": "#F59E0B",
+        "metadata": {}
+      },
+      {
+        "id": "GEO-Ukraine",
+        "label": "Country: Ukraine",
+        "node_type": "Country",
+        "status": "suspicious",
+        "color": "#F59E0B",
+        "metadata": {}
+      },
+      {
+        "id": "FILE-/finance/payroll_2026.xlsx",
+        "label": "File: /finance/payroll_2026.xlsx",
+        "node_type": "File",
+        "status": "confirmed",
+        "color": "#EF4444",
+        "metadata": {}
+      },
+      {
+        "id": "USB-USB-8891",
+        "label": "USB: USB-8891",
+        "node_type": "USB",
+        "status": "confirmed",
+        "color": "#EF4444",
+        "metadata": {}
+      }
+    ],
+    "edges": [
+      {
+        "source": "INC-001",
+        "target": "USER-U102",
+        "relationship": "involved_user",
+        "confidence": 1.0,
+        "event_ids": [],
+        "timestamp": null,
+        "strength": 1.0,
+        "color": "#EF4444"
+      },
+      {
+        "source": "USER-U102",
+        "target": "DEV-DEV-17",
+        "relationship": "logged_into",
+        "confidence": 1.0,
+        "event_ids": [],
+        "timestamp": null,
+        "strength": 1.0,
+        "color": "#EF4444"
+      },
+      {
+        "source": "IP-203.0.113.42",
+        "target": "USER-U102",
+        "relationship": "authenticated_from",
+        "confidence": 1.0,
+        "event_ids": [],
+        "timestamp": null,
+        "strength": 1.0,
+        "color": "#F59E0B"
+      },
+      {
+        "source": "GEO-Ukraine",
+        "target": "IP-203.0.113.42",
+        "relationship": "originates_from",
+        "confidence": 1.0,
+        "event_ids": [],
+        "timestamp": null,
+        "strength": 1.0,
+        "color": "#38BDF8"
+      },
+      {
+        "source": "DEV-DEV-17",
+        "target": "FILE-/finance/payroll_2026.xlsx",
+        "relationship": "accessed",
+        "confidence": 1.0,
+        "event_ids": [],
+        "timestamp": null,
+        "strength": 1.0,
+        "color": "#EF4444"
+      },
+      {
+        "source": "DEV-DEV-17",
+        "target": "USB-USB-8891",
+        "relationship": "connected",
+        "confidence": 1.0,
+        "event_ids": [],
+        "timestamp": null,
+        "strength": 1.0,
+        "color": "#EF4444"
+      },
+      {
+        "source": "FILE-/finance/payroll_2026.xlsx",
+        "target": "USB-USB-8891",
+        "relationship": "copied_to",
+        "confidence": 1.0,
+        "event_ids": [],
+        "timestamp": null,
+        "strength": 1.0,
+        "color": "#EF4444"
+      },
+      {
+        "source": "DEV-DEV-17",
+        "target": "DEV-DEV-17",
+        "relationship": "occurred_before",
+        "confidence": 1.0,
+        "event_ids": [],
+        "timestamp": "2026-10-12T09:15:00Z",
+        "strength": 1.0,
+        "color": "#64748B"
+      },
+      {
+        "source": "DEV-DEV-17",
+        "target": "DEV-DEV-17",
+        "relationship": "occurred_before",
+        "confidence": 1.0,
+        "event_ids": [],
+        "timestamp": "2026-10-12T09:25:00Z",
+        "strength": 1.0,
+        "color": "#64748B"
+      },
+      {
+        "source": "DEV-DEV-17",
+        "target": "DEV-DEV-17",
+        "relationship": "occurred_before",
+        "confidence": 1.0,
+        "event_ids": [],
+        "timestamp": "2026-10-12T09:31:00Z",
+        "strength": 1.0,
+        "color": "#64748B"
+      }
+    ]
+  }
+}

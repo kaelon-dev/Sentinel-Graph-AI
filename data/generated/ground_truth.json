@@ -1,0 +1,168 @@
+{
+  "normal_logs.csv": {
+    "is_benign": true,
+    "expected_incident_count": 0,
+    "max_severity_allowed": "MEDIUM",
+    "description": "Normal enterprise activity; zero high/critical incidents expected."
+  },
+  "suspicious_single_event_logs.csv": {
+    "is_benign": true,
+    "expected_incident_count": 1,
+    "max_severity_allowed": "MEDIUM",
+    "expected_severity_range": [
+      "LOW",
+      "MEDIUM"
+    ],
+    "description": "Isolated login anomaly; must be gated to MEDIUM or lower, never critical."
+  },
+  "data_exfiltration_attack_logs.csv": {
+    "is_benign": false,
+    "expected_incident_count": 1,
+    "expected_severity_range": [
+      "HIGH",
+      "CRITICAL"
+    ],
+    "expected_stages": [
+      "Initial Access",
+      "Collection",
+      "Exfiltration"
+    ],
+    "expected_attack_type": "Potential Data Exfiltration / Removable Media Theft",
+    "primary_user": "U102",
+    "primary_device": "DEV-17",
+    "evidence_event_ids": [
+      "EVT-1034",
+      "EVT-1042",
+      "EVT-1047",
+      "EVT-1050"
+    ],
+    "description": "Primary attack: Unfamiliar login -> payroll access -> unapproved USB -> file exfil."
+  },
+  "insider_data_exfiltration_logs.csv": {
+    "is_benign": false,
+    "expected_incident_count": 1,
+    "expected_severity_range": [
+      "HIGH",
+      "CRITICAL"
+    ],
+    "expected_stages": [
+      "Collection",
+      "Exfiltration"
+    ],
+    "expected_attack_type": "Potential Data Exfiltration / Removable Media Theft",
+    "description": "Insider threat exfiltrating critical acquisition docs to rogue USB."
+  },
+  "slow_hidden_attack_logs.csv": {
+    "is_benign": false,
+    "expected_incident_count": 1,
+    "requires_extended_window": true,
+    "expected_severity_range": [
+      "HIGH",
+      "CRITICAL"
+    ],
+    "description": "Multi-day slow-burn attack detected via extended correlation window."
+  },
+  "slow_burn_exfiltration_logs.csv": {
+    "is_benign": false,
+    "expected_incident_count": 1,
+    "requires_extended_window": true,
+    "expected_severity_range": [
+      "HIGH",
+      "CRITICAL"
+    ],
+    "description": "Multi-day slow-burn attack detected via extended correlation window."
+  },
+  "benign_lookalike_logs.csv": {
+    "is_benign": true,
+    "expected_incident_count": 0,
+    "max_severity_allowed": "MEDIUM",
+    "description": "Benign twin sequence: Routine login -> normal file -> approved USB -> public copy."
+  },
+  "traveling_employee_logs.csv": {
+    "is_benign": true,
+    "expected_incident_count": 1,
+    "max_severity_allowed": "MEDIUM",
+    "description": "Legitimate traveling employee; new country login without suspicious follow-on."
+  },
+  "approved_usb_public_copy_logs.csv": {
+    "is_benign": true,
+    "expected_incident_count": 0,
+    "max_severity_allowed": "MEDIUM",
+    "description": "Approved USB copying low-sensitivity public collateral."
+  },
+  "benign_sensitive_access_logs.csv": {
+    "is_benign": true,
+    "expected_incident_count": 0,
+    "max_severity_allowed": "MEDIUM",
+    "description": "Routine authorized access to sensitive financial files; zero incidents."
+  },
+  "noisy_failed_logins_logs.csv": {
+    "is_benign": true,
+    "expected_incident_count": 1,
+    "max_severity_allowed": "LOW",
+    "expected_severity_range": [
+      "INFO",
+      "LOW"
+    ],
+    "description": "Failed login burst without subsequent access; gated to LOW severity."
+  },
+  "mixed_users_logs.csv": {
+    "is_benign": true,
+    "expected_incident_count": 2,
+    "must_not_merge": true,
+    "max_severity_allowed": "MEDIUM",
+    "description": "Two unrelated users with weak login anomalies; entity-aware clustering keeps them separated."
+  },
+  "network_exfiltration_logs.csv": {
+    "is_benign": false,
+    "expected_incident_count": 1,
+    "expected_severity_range": [
+      "HIGH",
+      "CRITICAL"
+    ],
+    "expected_stages": [
+      "Collection",
+      "Exfiltration"
+    ],
+    "expected_attack_type": "Potential Network Exfiltration / External Egress",
+    "description": "Network egress exfiltration of critical SQL database dump to unknown host."
+  },
+  "credential_takeover_logs.csv": {
+    "is_benign": false,
+    "expected_incident_count": 1,
+    "expected_severity_range": [
+      "HIGH"
+    ],
+    "expected_stages": [
+      "Credential Access",
+      "Initial Access",
+      "Collection"
+    ],
+    "expected_attack_type": "Account Compromise / Credential Takeover",
+    "description": "Brute-force credential takeover leading to sensitive document compromise."
+  },
+  "off_hours_activity_logs.csv": {
+    "is_benign": true,
+    "expected_incident_count": 0,
+    "max_severity_allowed": "MEDIUM",
+    "description": "Late-night document editing without attack progression; zero high/critical incidents."
+  },
+  "novel_behavior_logs.csv": {
+    "is_benign": true,
+    "expected_incident_count": 0,
+    "max_severity_allowed": "MEDIUM",
+    "description": "Unusual application launch without exfiltration; supportive signal only."
+  },
+  "discovery_activity_logs.csv": {
+    "is_benign": false,
+    "expected_incident_count": 1,
+    "expected_stages": [
+      "Discovery"
+    ],
+    "expected_severity_range": [
+      "LOW",
+      "MEDIUM"
+    ],
+    "description": "Rapid directory scanning detected as MITRE Discovery stage."
+  }
+}

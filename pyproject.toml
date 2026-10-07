@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentinelgraph-ai"
+version = "1.0.0"
+description = "Explainable attack-story reconstruction and cyber threat intelligence platform"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "SentinelGraph AI Team" }
+]
+dependencies = [
+    "pydantic>=2.0.0",
+    "networkx>=3.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.22.0",
+    "pandas>=2.0.0",
+    "plotly>=5.15.0",
+    "streamlit>=1.30.0",
+    "pytest>=7.4.0",
+    "httpx>=0.25.0"
+]
+
+[project.optional-dependencies]
+ml = [
+    "scikit-learn>=1.3.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sentinelgraph*"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+pythonpath = ["."]
