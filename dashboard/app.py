@@ -2,6 +2,7 @@
 
 A professional Security Operations Center (SOC) investigation interface
 for explainable attack-story reconstruction and temporal graph analytics.
+Supports dual-theme switching: Dark SOC Command Mode and Light Enterprise Analyst Mode.
 """
 import json
 import time
@@ -21,7 +22,7 @@ from sentinelgraph.reporting.explanations import NarrativeExplainer
 from sentinelgraph.evaluation.metrics import EvaluationMetrics
 
 # -----------------------------------------------------------------------------
-# 1. PAGE CONFIGURATION & SOC DESIGN SYSTEM
+# 1. PAGE CONFIGURATION & DUAL THEME SPECIFICATION
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title=f"{__app_name__} — Threat Intelligence Command Center",
@@ -30,30 +31,175 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Enterprise SOC Palette:
-# Background: #0B1020 | Surface: #111827 | Elevated: #172033 | Border: #263244
-# Primary: #38BDF8 | Critical: #EF4444 | High: #F97316 | Medium: #F59E0B | Success: #22C55E
-st.markdown("""
-<style>
-    /* Global Canvas */
-    .stApp {
-        background-color: #0B1020;
-        color: #E2E8F0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+# Design System Token Palettes (Dark SOC vs. Light Enterprise Analyst)
+THEMES: Dict[str, Dict[str, str]] = {
+    "🌙 Dark SOC": {
+        "bg_canvas": "#0B1020",
+        "bg_surface": "#111827",
+        "bg_elevated": "#172033",
+        "bg_elevated_subtle": "#1E293B",
+        "border_color": "#263244",
+        "border_subtle": "#1E293B",
+        "text_primary": "#F8FAFC",
+        "text_secondary": "#E2E8F0",
+        "text_muted": "#94A3B8",
+        "text_dim": "#64748B",
+        "primary_accent": "#38BDF8",
+        "primary_subtle": "rgba(56, 189, 248, 0.12)",
+        "critical_color": "#EF4444",
+        "critical_bg": "rgba(239, 68, 68, 0.15)",
+        "critical_border": "rgba(239, 68, 68, 0.4)",
+        "high_color": "#F97316",
+        "high_bg": "rgba(249, 115, 22, 0.15)",
+        "high_border": "rgba(249, 115, 22, 0.4)",
+        "medium_color": "#F59E0B",
+        "medium_bg": "rgba(245, 158, 11, 0.15)",
+        "medium_border": "rgba(245, 158, 11, 0.4)",
+        "low_color": "#38BDF8",
+        "low_bg": "rgba(56, 189, 248, 0.15)",
+        "low_border": "rgba(56, 189, 248, 0.4)",
+        "success_color": "#22C55E",
+        "success_bg": "rgba(34, 197, 94, 0.15)",
+        "success_border": "rgba(34, 197, 94, 0.4)",
+        "primary_card_gradient": "linear-gradient(135deg, #111827 0%, #172033 100%)",
+        "primary_card_border": "#38BDF8",
+        "card_shadow": "0 4px 20px rgba(11, 16, 32, 0.5)",
+        "code_bg": "rgba(56, 189, 248, 0.1)",
+        "code_text": "#38BDF8",
+        "graph_bg": "#0B1020",
+        "graph_edge": "#334155",
+        "graph_text": "#E2E8F0",
+        "graph_node_border": "#1E293B",
+        "replay_active_bg": "#1E1B4B",
+        "replay_active_border": "#EF4444",
+        "replay_inactive_bg": "#111827",
+        "replay_inactive_border": "#263244",
+        "input_bg": "#172033",
+    },
+    "☀️ Light Enterprise": {
+        "bg_canvas": "#FAF8FF",
+        "bg_surface": "#FFFFFF",
+        "bg_elevated": "#F2F3FF",
+        "bg_elevated_subtle": "#EAEDFF",
+        "border_color": "#D2D9F4",
+        "border_subtle": "#E2E7FF",
+        "text_primary": "#131B2E",
+        "text_secondary": "#283044",
+        "text_muted": "#475569",
+        "text_dim": "#707881",
+        "primary_accent": "#006194",
+        "primary_subtle": "#CCE5FF",
+        "critical_color": "#BA1A1A",
+        "critical_bg": "#FFDAD6",
+        "critical_border": "#FFB4AB",
+        "high_color": "#C2410C",
+        "high_bg": "#FFEDD5",
+        "high_border": "#FED7AA",
+        "medium_color": "#B45309",
+        "medium_bg": "#FEF3C7",
+        "medium_border": "#FDE68A",
+        "low_color": "#006194",
+        "low_bg": "#E0F2FE",
+        "low_border": "#BAE6FD",
+        "success_color": "#15803D",
+        "success_bg": "#DCFCE7",
+        "success_border": "#BBF7D0",
+        "primary_card_gradient": "linear-gradient(135deg, #FFFFFF 0%, #F2F3FF 100%)",
+        "primary_card_border": "#006194",
+        "card_shadow": "0 2px 12px rgba(19, 27, 46, 0.06)",
+        "code_bg": "rgba(0, 97, 148, 0.08)",
+        "code_text": "#006194",
+        "graph_bg": "#FAF8FF",
+        "graph_edge": "#BFC7D2",
+        "graph_text": "#131B2E",
+        "graph_node_border": "#FFFFFF",
+        "replay_active_bg": "#FFDAD6",
+        "replay_active_border": "#BA1A1A",
+        "replay_inactive_bg": "#FFFFFF",
+        "replay_inactive_border": "#D2D9F4",
+        "input_bg": "#F2F3FF",
     }
-    footer {visibility: hidden;}
-    #MainMenu, .stDeployButton {visibility: hidden !important;}
-    header {background-color: transparent !important;}
+}
+
+# -----------------------------------------------------------------------------
+# 2. SIDEBAR CONFIGURATION & THEME TOGGLE
+# -----------------------------------------------------------------------------
+st.sidebar.markdown(f"### 🛡️ {__app_name__}")
+st.sidebar.caption(f"**Enterprise Threat Intelligence** · v{__version__}")
+
+# Theme Selector in Sidebar
+if "theme_mode" not in st.session_state:
+    st.session_state.theme_mode = "🌙 Dark SOC"
+
+theme_selection = st.sidebar.radio(
+    "Console Theme Mode",
+    ["🌙 Dark SOC", "☀️ Light Enterprise"],
+    index=0 if st.session_state.theme_mode == "🌙 Dark SOC" else 1,
+    horizontal=True,
+    help="Toggle between Dark SOC Command Center and Light Enterprise Analyst Mode"
+)
+st.session_state.theme_mode = theme_selection
+T = THEMES[theme_selection]
+
+# Inject Dynamic CSS matching current theme tokens
+st.markdown(f"""
+<style>
+    :root {{
+        --bg-canvas: {T['bg_canvas']};
+        --bg-surface: {T['bg_surface']};
+        --bg-elevated: {T['bg_elevated']};
+        --bg-elevated-subtle: {T['bg_elevated_subtle']};
+        --border-color: {T['border_color']};
+        --border-subtle: {T['border_subtle']};
+        --text-primary: {T['text_primary']};
+        --text-secondary: {T['text_secondary']};
+        --text-muted: {T['text_muted']};
+        --text-dim: {T['text_dim']};
+        --primary-accent: {T['primary_accent']};
+        --primary-subtle: {T['primary_subtle']};
+        --critical-color: {T['critical_color']};
+        --critical-bg: {T['critical_bg']};
+        --critical-border: {T['critical_border']};
+        --high-color: {T['high_color']};
+        --high-bg: {T['high_bg']};
+        --high-border: {T['high_border']};
+        --medium-color: {T['medium_color']};
+        --medium-bg: {T['medium_bg']};
+        --medium-border: {T['medium_border']};
+        --low-color: {T['low_color']};
+        --low-bg: {T['low_bg']};
+        --low-border: {T['low_border']};
+        --success-color: {T['success_color']};
+        --success-bg: {T['success_bg']};
+        --success-border: {T['success_border']};
+        --code-bg: {T['code_bg']};
+        --code-text: {T['code_text']};
+        --replay-active-bg: {T['replay_active_bg']};
+        --replay-inactive-bg: {T['replay_inactive_bg']};
+    }}
+
+    /* Global Canvas */
+    .stApp {{
+        background-color: var(--bg-canvas) !important;
+        color: var(--text-primary) !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }}
+    footer {{visibility: hidden;}}
+    #MainMenu, .stDeployButton {{visibility: hidden !important;}}
+    header {{background-color: transparent !important;}}
 
     /* Sidebar Refinement */
-    [data-testid="stSidebar"] {
-        background-color: #111827;
-        border-right: 1px solid #263244;
+    [data-testid="stSidebar"] {{
+        background-color: var(--bg-surface) !important;
+        border-right: 1px solid var(--border-color) !important;
         padding-top: 1rem;
-    }
+    }}
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] label {{
+        color: var(--text-primary) !important;
+    }}
     
     /* Prominent Sidebar Expand Button (Always discoverable) */
-    [data-testid="collapsedControl"] {
+    [data-testid="collapsedControl"] {{
         display: flex !important;
         visibility: visible !important;
         opacity: 1 !important;
@@ -61,47 +207,48 @@ st.markdown("""
         position: fixed !important;
         top: 12px !important;
         left: 12px !important;
-        background-color: #172033 !important;
-        color: #38BDF8 !important;
-        border: 1px solid #38BDF8 !important;
+        background-color: var(--bg-elevated) !important;
+        color: var(--primary-accent) !important;
+        border: 1px solid var(--primary-accent) !important;
         border-radius: 6px !important;
         padding: 5px 9px !important;
-        box-shadow: 0 0 12px rgba(56, 189, 248, 0.4) !important;
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.3) !important;
         cursor: pointer !important;
-    }
-    [data-testid="collapsedControl"] svg {
-        fill: #38BDF8 !important;
-        stroke: #38BDF8 !important;
+    }}
+    [data-testid="collapsedControl"] svg {{
+        fill: var(--primary-accent) !important;
+        stroke: var(--primary-accent) !important;
         width: 20px !important;
         height: 20px !important;
-    }
+    }}
 
     /* Top Shell Navigation Bar */
-    .soc-header {
+    .soc-header {{
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 12px 20px;
-        background-color: #111827;
-        border: 1px solid #263244;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         margin-bottom: 20px;
-    }
-    .soc-header-title {
+        box-shadow: {T['card_shadow']};
+    }}
+    .soc-header-title {{
         font-size: 18px;
         font-weight: 700;
-        color: #F8FAFC;
+        color: var(--text-primary);
         display: flex;
         align-items: center;
         gap: 10px;
-    }
-    .soc-header-subtitle {
+    }}
+    .soc-header-subtitle {{
         font-size: 12px;
-        color: #94A3B8;
+        color: var(--text-muted);
         font-weight: 400;
         margin-top: 2px;
-    }
-    .soc-status-badge {
+    }}
+    .soc-status-badge {{
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -109,238 +256,263 @@ st.markdown("""
         font-weight: 600;
         letter-spacing: 0.5px;
         text-transform: uppercase;
-        color: #22C55E;
-        background-color: rgba(34, 197, 94, 0.1);
-        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: var(--success-color);
+        background-color: var(--success-bg);
+        border: 1px solid var(--success-border);
         padding: 4px 10px;
         border-radius: 20px;
-    }
+    }}
 
     /* Metric Cards System */
-    .metric-card {
-        background-color: #111827;
-        border: 1px solid #263244;
+    .metric-card {{
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 14px 16px;
         text-align: left;
-        transition: border-color 0.15s ease-in-out;
-    }
-    .metric-card:hover {
-        border-color: #38BDF8;
-    }
-    .metric-value {
+        box-shadow: {T['card_shadow']};
+        transition: border-color 0.15s ease-in-out, transform 0.15s ease-in-out;
+    }}
+    .metric-card:hover {{
+        border-color: var(--primary-accent);
+    }}
+    .metric-value {{
         font-size: 26px;
         font-weight: 700;
         line-height: 1.2;
-        color: #F8FAFC;
+        color: var(--text-primary);
         font-feature-settings: "tnum";
-    }
-    .metric-label {
+    }}
+    .metric-label {{
         font-size: 11px;
         font-weight: 600;
-        color: #94A3B8;
+        color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-top: 4px;
-    }
-    .metric-subtext {
+    }}
+    .metric-subtext {{
         font-size: 11px;
-        color: #64748B;
+        color: var(--text-dim);
         margin-top: 4px;
-    }
+    }}
 
     /* Severity Badges */
-    .badge-critical {
-        background-color: rgba(239, 68, 68, 0.15);
-        color: #EF4444;
-        border: 1px solid rgba(239, 68, 68, 0.4);
+    .badge-critical {{
+        background-color: var(--critical-bg);
+        color: var(--critical-color);
+        border: 1px solid var(--critical-border);
         padding: 3px 8px;
         border-radius: 4px;
         font-weight: 700;
         font-size: 11px;
         letter-spacing: 0.5px;
-    }
-    .badge-high {
-        background-color: rgba(249, 115, 22, 0.15);
-        color: #F97316;
-        border: 1px solid rgba(249, 115, 22, 0.4);
+    }}
+    .badge-high {{
+        background-color: var(--high-bg);
+        color: var(--high-color);
+        border: 1px solid var(--high-border);
         padding: 3px 8px;
         border-radius: 4px;
         font-weight: 700;
         font-size: 11px;
         letter-spacing: 0.5px;
-    }
-    .badge-medium {
-        background-color: rgba(245, 158, 11, 0.15);
-        color: #F59E0B;
-        border: 1px solid rgba(245, 158, 11, 0.4);
+    }}
+    .badge-medium {{
+        background-color: var(--medium-bg);
+        color: var(--medium-color);
+        border: 1px solid var(--medium-border);
         padding: 3px 8px;
         border-radius: 4px;
         font-weight: 700;
         font-size: 11px;
         letter-spacing: 0.5px;
-    }
-    .badge-low {
-        background-color: rgba(56, 189, 248, 0.15);
-        color: #38BDF8;
-        border: 1px solid rgba(56, 189, 248, 0.4);
+    }}
+    .badge-low {{
+        background-color: var(--low-bg);
+        color: var(--low-color);
+        border: 1px solid var(--low-border);
         padding: 3px 8px;
         border-radius: 4px;
         font-weight: 700;
         font-size: 11px;
         letter-spacing: 0.5px;
-    }
-    .badge-clean {
-        background-color: rgba(34, 197, 94, 0.15);
-        color: #22C55E;
-        border: 1px solid rgba(34, 197, 94, 0.4);
+    }}
+    .badge-clean {{
+        background-color: var(--success-bg);
+        color: var(--success-color);
+        border: 1px solid var(--success-border);
         padding: 3px 8px;
         border-radius: 4px;
         font-weight: 700;
         font-size: 11px;
         letter-spacing: 0.5px;
-    }
+    }}
 
     /* Primary Threat Story Card */
-    .primary-threat-card {
-        background: linear-gradient(135deg, #111827 0%, #172033 100%);
-        border: 1px solid #38BDF8;
+    .primary-threat-card {{
+        background: {T['primary_card_gradient']};
+        border: 1px solid {T['primary_card_border']};
         border-radius: 10px;
         padding: 22px;
         margin-bottom: 24px;
-        box-shadow: 0 4px 20px rgba(11, 16, 32, 0.5);
-    }
-    .primary-threat-header {
+        box-shadow: {T['card_shadow']};
+    }}
+    .primary-threat-header {{
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
         gap: 12px;
         padding-bottom: 14px;
-        border-bottom: 1px solid #263244;
-    }
-    .primary-threat-title {
+        border-bottom: 1px solid var(--border-color);
+    }}
+    .primary-threat-title {{
         font-size: 20px;
         font-weight: 700;
-        color: #F8FAFC;
+        color: var(--text-primary);
         margin-left: 10px;
-    }
-    .threat-score-pill {
+    }}
+    .threat-score-pill {{
         display: inline-flex;
         align-items: baseline;
         gap: 6px;
         padding: 6px 14px;
-        background-color: #111827;
-        border: 1px solid #EF4444;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--critical-border);
         border-radius: 6px;
-    }
+    }}
 
     /* Attack Chain Breadcrumb Flow */
-    .attack-chain-bar {
+    .attack-chain-bar {{
         display: flex;
         align-items: center;
         flex-wrap: wrap;
         gap: 8px;
         padding: 10px 14px;
-        background-color: #111827;
-        border: 1px solid #263244;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
         border-radius: 6px;
         margin: 14px 0;
         font-size: 13px;
-    }
-    .chain-node {
-        background-color: #172033;
-        border: 1px solid #263244;
-        color: #E2E8F0;
+    }}
+    .chain-node {{
+        background-color: var(--bg-elevated);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
         padding: 4px 10px;
         border-radius: 4px;
         font-weight: 600;
-    }
-    .chain-arrow {
-        color: #38BDF8;
+    }}
+    .chain-arrow {{
+        color: var(--primary-accent);
         font-weight: 700;
-    }
+    }}
 
     /* Attack Chain Compass Matrix */
-    .compass-stage-card {
-        background-color: #111827;
-        border: 1px solid #263244;
+    .compass-stage-card {{
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
         border-radius: 6px;
         padding: 12px 10px;
         text-align: center;
-    }
-    .compass-stage-title {
+        box-shadow: {T['card_shadow']};
+    }}
+    .compass-stage-title {{
         font-size: 11px;
         font-weight: 600;
-        color: #94A3B8;
+        color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.5px;
-    }
-    .compass-stage-status {
+    }}
+    .compass-stage-status {{
         font-size: 13px;
         font-weight: 700;
         margin-top: 6px;
-    }
+    }}
 
     /* Section Cards */
-    .soc-surface-card {
-        background-color: #111827;
-        border: 1px solid #263244;
+    .soc-surface-card {{
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 18px;
         height: 100%;
-    }
-    .soc-card-title {
+        box-shadow: {T['card_shadow']};
+    }}
+    .soc-card-title {{
         font-size: 14px;
         font-weight: 700;
-        color: #F8FAFC;
+        color: var(--text-primary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 12px;
         display: flex;
         align-items: center;
         gap: 8px;
-    }
+    }}
 
     /* Monospace Forensics */
-    .mono-id {
+    .mono-id {{
         font-family: "JetBrains Mono", "Fira Code", monospace;
         font-size: 12px;
-        color: #38BDF8;
-        background-color: rgba(56, 189, 248, 0.1);
+        color: var(--code-text);
+        background-color: var(--code-bg);
+        border: 1px solid var(--border-subtle);
         padding: 2px 6px;
         border-radius: 4px;
-    }
-    .mono-hash {
+    }}
+    .mono-hash {{
         font-family: "JetBrains Mono", "Fira Code", monospace;
         font-size: 11px;
-        color: #94A3B8;
+        color: var(--text-dim);
         word-break: break-all;
-    }
+    }}
 
     /* Clean Streamlit Overrides */
-    .stTabs [data-baseweb="tab-list"] {
+    .stTabs [data-baseweb="tab-list"] {{
         gap: 8px;
-        border-bottom: 1px solid #263244;
-    }
-    .stTabs [data-baseweb="tab"] {
+        border-bottom: 1px solid var(--border-color);
+    }}
+    .stTabs [data-baseweb="tab"] {{
         background-color: transparent;
-        color: #94A3B8;
-        border-radius: 4px 4px 0 0;
+        color: var(--text-muted);
+        border-radius: 6px 6px 0 0;
         padding: 8px 16px;
         font-size: 13px;
         font-weight: 600;
-    }
-    .stTabs [aria-selected="true"] {
-        color: #38BDF8 !important;
-        border-bottom: 2px solid #38BDF8 !important;
-        background-color: rgba(56, 189, 248, 0.05);
-    }
+    }}
+    .stTabs [aria-selected="true"] {{
+        color: var(--primary-accent) !important;
+        border-bottom: 2px solid var(--primary-accent) !important;
+        background-color: var(--primary-subtle);
+    }}
+
+    /* Streamlit Expander & Dataframe */
+    [data-testid="stExpander"] {{
+        background-color: var(--bg-surface) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 8px !important;
+        margin-bottom: 10px;
+    }}
+    [data-testid="stExpander"] summary {{
+        color: var(--text-primary) !important;
+        font-weight: 600;
+    }}
+    [data-testid="stMetricValue"] {{
+        color: var(--text-primary) !important;
+    }}
+    [data-testid="stMetricLabel"] {{
+        color: var(--text-muted) !important;
+    }}
+    .stProgress > div > div > div > div {{
+        background-color: var(--primary-accent) !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 2. PIPELINE RUNNER & DATASET UTILITIES
+# 3. PIPELINE RUNNER & DATASET UTILITIES
 # -----------------------------------------------------------------------------
 @st.cache_resource
 def load_analysis(dataset_name: str, use_extended_window: bool = False) -> AnalysisResult:
@@ -359,8 +531,8 @@ def get_available_datasets() -> List[str]:
     return [f.name for f in sorted(gen_dir.glob("*.csv"))]
 
 
-# Helper UI Renderers
 def render_badge(severity: str) -> str:
+    """Render a theme-aware semantic severity badge."""
     sev = severity.upper()
     if sev == "CRITICAL":
         return "<span class='badge-critical'>CRITICAL</span>"
@@ -375,10 +547,9 @@ def render_badge(severity: str) -> str:
 
 
 # -----------------------------------------------------------------------------
-# 3. SIDEBAR NAVIGATION
+# 4. SIDEBAR NAVIGATION
 # -----------------------------------------------------------------------------
-st.sidebar.markdown(f"### 🛡️ {__app_name__}")
-st.sidebar.caption(f"**Enterprise Threat Intelligence** · v{__version__}")
+st.sidebar.markdown("---")
 
 # Dataset Switcher
 all_datasets = get_available_datasets()
@@ -392,8 +563,8 @@ selected_dataset = st.sidebar.selectbox(
 )
 use_ext_window = "slow" in selected_dataset
 
-# Navigation Destinations (Organized by function)
-st.sidebar.markdown("<br><span style='font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase;'>OPERATIONS</span>", unsafe_allow_html=True)
+# Navigation Destinations (Organized by operational function)
+st.sidebar.markdown(f"<span style='font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;'>OPERATIONS</span>", unsafe_allow_html=True)
 
 nav_options = [
     "🛰️ Command Center",
@@ -405,7 +576,6 @@ nav_options = [
     "📊 Evaluation"
 ]
 
-# Support stateful redirection to incidents page
 if "nav_destination" not in st.session_state:
     st.session_state.nav_destination = nav_options[0]
 
@@ -419,11 +589,11 @@ st.session_state.nav_destination = nav_selection
 
 # System status in sidebar
 st.sidebar.markdown("---")
-st.sidebar.markdown("""
-<div style='background-color: #172033; padding: 10px 12px; border-radius: 6px; border: 1px solid #263244;'>
-    <div style='font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 600;'>System Engine</div>
-    <div style='font-size: 12px; color: #22C55E; font-weight: 600; margin-top: 2px;'>● 100% Deterministic Local</div>
-    <div style='font-size: 11px; color: #64748B; margin-top: 4px;'>Zero Cloud Leakage · Air-Gapped</div>
+st.sidebar.markdown(f"""
+<div style='background-color: var(--bg-elevated); padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-color);'>
+    <div style='font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;'>System Engine</div>
+    <div style='font-size: 12px; color: var(--success-color); font-weight: 600; margin-top: 2px;'>● 100% Deterministic Local</div>
+    <div style='font-size: 11px; color: var(--text-dim); margin-top: 4px;'>Zero Cloud Leakage · Air-Gapped</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -437,24 +607,24 @@ except Exception as e:
 
 
 # -----------------------------------------------------------------------------
-# 4. GLOBAL SOC HEADER
+# 5. GLOBAL SOC HEADER
 # -----------------------------------------------------------------------------
 st.markdown(f"""
 <div class='soc-header'>
     <div>
-        <div class='soc-header-title'>🛡️ {__app_name__} <span style='font-weight: 400; color: #64748B;'>|</span> <span style='font-size: 15px; color: #38BDF8;'>Threat Intelligence Command Center</span></div>
+        <div class='soc-header-title'>🛡️ {__app_name__} <span style='font-weight: 400; color: var(--text-dim);'>|</span> <span style='font-size: 15px; color: var(--primary-accent);'>Threat Intelligence Command Center</span></div>
         <div class='soc-header-subtitle'>Autonomous Explainable Attack Story Reconstruction · Telemetry: <code class='mono-id'>{selected_dataset}</code></div>
     </div>
     <div style='text-align: right;'>
         <div class='soc-status-badge'>● SYSTEM OPERATIONAL</div>
-        <div style='font-size: 11px; color: #64748B; margin-top: 4px;'>Run ID: <code class='mono-hash'>{analysis_result.run_id}</code></div>
+        <div style='font-size: 11px; color: var(--text-dim); margin-top: 4px;'>Run ID: <code class='mono-hash'>{analysis_result.run_id}</code></div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 
 # -----------------------------------------------------------------------------
-# 5. VIEW ROUTING
+# 6. VIEW ROUTING
 # -----------------------------------------------------------------------------
 
 # =============================================================================
@@ -477,7 +647,7 @@ if nav_selection == "🛰️ Command Center":
     with m2:
         st.markdown(f"""
         <div class='metric-card'>
-            <div class='metric-value' style='color: #38BDF8;'>{len(analysis_result.signals_detected)}</div>
+            <div class='metric-value' style='color: var(--primary-accent);'>{len(analysis_result.signals_detected)}</div>
             <div class='metric-label'>Security Signals</div>
             <div class='metric-subtext'>Rule & Anomaly Matches</div>
         </div>
@@ -485,7 +655,7 @@ if nav_selection == "🛰️ Command Center":
     with m3:
         st.markdown(f"""
         <div class='metric-card'>
-            <div class='metric-value' style='color: #F8FAFC;'>{len(incidents)}</div>
+            <div class='metric-value'>{len(incidents)}</div>
             <div class='metric-label'>Attack Stories</div>
             <div class='metric-subtext'>Correlated Clusters</div>
         </div>
@@ -493,7 +663,7 @@ if nav_selection == "🛰️ Command Center":
     with m4:
         st.markdown(f"""
         <div class='metric-card'>
-            <div class='metric-value' style='color: {"#EF4444" if crit_count > 0 else "#64748B"};'>{crit_count}</div>
+            <div class='metric-value' style='color: {"var(--critical-color)" if crit_count > 0 else "var(--text-dim)"};'>{crit_count}</div>
             <div class='metric-label'>Critical Incidents</div>
             <div class='metric-subtext'>Multi-Stage Exfiltration</div>
         </div>
@@ -501,7 +671,7 @@ if nav_selection == "🛰️ Command Center":
     with m5:
         st.markdown(f"""
         <div class='metric-card'>
-            <div class='metric-value' style='color: {"#F97316" if high_count > 0 else "#64748B"};'>{high_count}</div>
+            <div class='metric-value' style='color: {"var(--high-color)" if high_count > 0 else "var(--text-dim)"};'>{high_count}</div>
             <div class='metric-label'>High Incidents</div>
             <div class='metric-subtext'>Unconfirmed / Staged</div>
         </div>
@@ -509,7 +679,7 @@ if nav_selection == "🛰️ Command Center":
     with m6:
         st.markdown(f"""
         <div class='metric-card'>
-            <div class='metric-value' style='color: #22C55E;'>0.00%</div>
+            <div class='metric-value' style='color: var(--success-color);'>0.00%</div>
             <div class='metric-label'>False Positive Rate</div>
             <div class='metric-subtext'>Zero Clean Alarms</div>
         </div>
@@ -532,34 +702,34 @@ if nav_selection == "🛰️ Command Center":
                 <div style='display: flex; align-items: center;'>
                     {render_badge(top_inc.severity)}
                     <span class='primary-threat-title'>{top_inc.title}</span>
-                    <span style='margin-left: 12px; font-size: 12px; color: #94A3B8;'><code class='mono-id'>{top_inc.incident_id}</code></span>
+                    <span style='margin-left: 12px; font-size: 12px;'><code class='mono-id'>{top_inc.incident_id}</code></span>
                 </div>
                 <div>
                     <span class='threat-score-pill'>
-                        <span style='font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 600;'>Risk Score</span>
-                        <span style='font-size: 18px; font-weight: 700; color: #EF4444;'>{top_inc.risk_score}</span>
-                        <span style='font-size: 12px; color: #64748B;'>/ 100</span>
-                        <span style='color: #64748B; margin: 0 4px;'>|</span>
-                        <span style='font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 600;'>Confidence</span>
-                        <span style='font-size: 16px; font-weight: 700; color: #38BDF8;'>{int(top_inc.confidence * 100)}%</span>
+                        <span style='font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;'>Risk Score</span>
+                        <span style='font-size: 18px; font-weight: 700; color: var(--critical-color);'>{top_inc.risk_score}</span>
+                        <span style='font-size: 12px; color: var(--text-dim);'>/ 100</span>
+                        <span style='color: var(--text-dim); margin: 0 4px;'>|</span>
+                        <span style='font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;'>Confidence</span>
+                        <span style='font-size: 16px; font-weight: 700; color: var(--primary-accent);'>{int(top_inc.confidence * 100)}%</span>
                     </span>
                 </div>
             </div>
             
             <div class='attack-chain-bar'>
-                <span style='color: #94A3B8; font-weight: 600; text-transform: uppercase; font-size: 11px;'>Attack Chain Flow:</span>
+                <span style='color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px;'>Attack Chain Flow:</span>
                 <span class='chain-node'>👤 {users_str}</span>
                 <span class='chain-arrow'>➔</span>
                 <span class='chain-node'>💻 {devs_str}</span>
                 <span class='chain-arrow'>➔</span>
                 <span class='chain-node'>💾 {usb_str if usb_str != 'N/A' else 'Network Socket'}</span>
                 <span class='chain-arrow'>➔</span>
-                <span class='chain-node' style='color: #EF4444; border-color: rgba(239, 68, 68, 0.4);'>🎯 Exfiltrated Asset</span>
+                <span class='chain-node' style='color: var(--critical-color); border-color: var(--critical-border);'>🎯 Exfiltrated Asset</span>
             </div>
 
             <div style='margin-top: 14px;'>
-                <div style='font-size: 11px; font-weight: 700; color: #38BDF8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;'>WHAT HAPPENED</div>
-                <div style='font-size: 14px; line-height: 1.6; color: #E2E8F0;'>{what_happened_text}</div>
+                <div style='font-size: 11px; font-weight: 700; color: var(--primary-accent); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;'>WHAT HAPPENED</div>
+                <div style='font-size: 14px; line-height: 1.6; color: var(--text-secondary);'>{what_happened_text}</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -572,11 +742,11 @@ if nav_selection == "🛰️ Command Center":
                 st.session_state.selected_inc_id = top_inc.incident_id
                 st.rerun()
     else:
-        st.markdown("""
-        <div style='background-color: #111827; border: 1px solid #22C55E; border-radius: 8px; padding: 24px; text-align: center;'>
+        st.markdown(f"""
+        <div style='background-color: var(--bg-surface); border: 1px solid var(--success-color); border-radius: 8px; padding: 24px; text-align: center; box-shadow: {T['card_shadow']};'>
             <div style='font-size: 28px;'>🛡️</div>
-            <div style='font-size: 18px; font-weight: 700; color: #22C55E; margin-top: 8px;'>Zero Threats Detected</div>
-            <div style='font-size: 13px; color: #94A3B8; margin-top: 4px;'>Telemetry exhibits expected enterprise baseline operations. Zero false alarms generated.</div>
+            <div style='font-size: 18px; font-weight: 700; color: var(--success-color); margin-top: 8px;'>Zero Threats Detected</div>
+            <div style='font-size: 13px; color: var(--text-muted); margin-top: 4px;'>Telemetry exhibits expected enterprise baseline operations. Zero false alarms generated.</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -586,51 +756,48 @@ if nav_selection == "🛰️ Command Center":
     col_sig, col_twin = st.columns(2)
 
     with col_sig:
-        st.markdown("""
+        st.markdown(f"""
         <div class='soc-surface-card'>
             <div class='soc-card-title'>⚡ Signal ➔ Story Consolidation</div>
-            <div style='display: flex; align-items: center; justify-content: space-around; background-color: #172033; padding: 14px; border-radius: 6px; border: 1px solid #263244; margin-bottom: 12px;'>
+            <div style='display: flex; align-items: center; justify-content: space-around; background-color: var(--bg-elevated); padding: 14px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 12px;'>
                 <div style='text-align: center;'>
-                    <div style='font-size: 22px; font-weight: 700; color: #38BDF8;'>""" + str(len(analysis_result.signals_detected)) + """</div>
-                    <div style='font-size: 11px; color: #94A3B8; text-transform: uppercase;'>Disparate Signals</div>
+                    <div style='font-size: 22px; font-weight: 700; color: var(--primary-accent);'>{len(analysis_result.signals_detected)}</div>
+                    <div style='font-size: 11px; color: var(--text-muted); text-transform: uppercase;'>Disparate Signals</div>
                 </div>
-                <div style='font-size: 20px; color: #64748B;'>➔</div>
+                <div style='font-size: 20px; color: var(--text-dim);'>➔</div>
                 <div style='text-align: center;'>
-                    <div style='font-size: 12px; font-weight: 700; color: #F8FAFC;'>Correlation Engine</div>
-                    <div style='font-size: 10px; color: #64748B;'>Temporal Graph Clustering</div>
+                    <div style='font-size: 12px; font-weight: 700; color: var(--text-primary);'>Correlation Engine</div>
+                    <div style='font-size: 10px; color: var(--text-dim);'>Temporal Graph Clustering</div>
                 </div>
-                <div style='font-size: 20px; color: #64748B;'>➔</div>
+                <div style='font-size: 20px; color: var(--text-dim);'>➔</div>
                 <div style='text-align: center;'>
-                    <div style='font-size: 22px; font-weight: 700; color: #22C55E;'>""" + str(len(incidents)) + """</div>
-                    <div style='font-size: 11px; color: #94A3B8; text-transform: uppercase;'>Unified Story</div>
+                    <div style='font-size: 22px; font-weight: 700; color: var(--success-color);'>{len(incidents)}</div>
+                    <div style='font-size: 11px; color: var(--text-muted); text-transform: uppercase;'>Unified Story</div>
                 </div>
             </div>
-            <p style='font-size: 13px; color: #94A3B8; line-height: 1.5; margin: 0;'>
-                Individual alerts flood SOC analysts. SentinelGraph AI groups related authentication, access, and transfer signals across entities into one coherent forensic incident.
+            <p style='font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0;'>
+                Individual alerts flood SOC analysts with noise. SentinelGraph AI groups related authentication, access, and transfer signals across entities into one coherent forensic incident.
             </p>
         </div>
         """, unsafe_allow_html=True)
 
     with col_twin:
-        twin_content = """
-        <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;'>
-            <div style='background-color: #172033; padding: 10px; border-radius: 6px; border-left: 3px solid #22C55E;'>
-                <div style='font-size: 11px; font-weight: 700; color: #22C55E; text-transform: uppercase;'>Benign Pattern</div>
-                <div style='font-size: 12px; color: #E2E8F0; margin-top: 4px;'>• Routine Login (Austin)<br>• Public Doc Access<br>• Approved USB Plugged<br>• Public Collateral Copy</div>
-            </div>
-            <div style='background-color: #172033; padding: 10px; border-radius: 6px; border-left: 3px solid #EF4444;'>
-                <div style='font-size: 11px; font-weight: 700; color: #EF4444; text-transform: uppercase;'>Attack Pattern</div>
-                <div style='font-size: 12px; color: #E2E8F0; margin-top: 4px;'>• Foreign Login (Singapore)<br>• Restricted Payroll Access<br>• Unapproved Rogue USB<br>• High-Sensitivity Exfil</div>
-            </div>
-        </div>
-        <p style='font-size: 13px; color: #94A3B8; line-height: 1.5; margin: 0;'>
-            Both workflows share structural steps, but entity baseline profiling and sensitivity gating prevent false alarms on legitimate business operations.
-        </p>
-        """
         st.markdown(f"""
         <div class='soc-surface-card'>
             <div class='soc-card-title'>⚖️ Benign Twin Architecture</div>
-            {twin_content}
+            <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;'>
+                <div style='background-color: var(--bg-elevated); padding: 10px; border-radius: 6px; border-left: 3px solid var(--success-color);'>
+                    <div style='font-size: 11px; font-weight: 700; color: var(--success-color); text-transform: uppercase;'>Benign Pattern</div>
+                    <div style='font-size: 12px; color: var(--text-secondary); margin-top: 4px;'>• Routine Login (Austin)<br>• Public Doc Access<br>• Approved USB Plugged<br>• Public Collateral Copy</div>
+                </div>
+                <div style='background-color: var(--bg-elevated); padding: 10px; border-radius: 6px; border-left: 3px solid var(--critical-color);'>
+                    <div style='font-size: 11px; font-weight: 700; color: var(--critical-color); text-transform: uppercase;'>Attack Pattern</div>
+                    <div style='font-size: 12px; color: var(--text-secondary); margin-top: 4px;'>• Foreign Login (Singapore)<br>• Restricted Payroll Access<br>• Unapproved Rogue USB<br>• High-Sensitivity Exfil</div>
+                </div>
+            </div>
+            <p style='font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0;'>
+                Both workflows share structural steps, but entity baseline profiling and sensitivity gating prevent false alarms on legitimate business operations.
+            </p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -693,21 +860,21 @@ elif nav_selection == "🚨 Incidents":
 
         # 3. Incident Identity Header
         st.markdown(f"""
-        <div style='background-color: #111827; border: 1px solid #263244; border-radius: 8px; padding: 18px; margin-bottom: 18px;'>
+        <div style='background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 18px; margin-bottom: 18px; box-shadow: {T['card_shadow']};'>
             <div style='display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;'>
                 <div>
                     {render_badge(selected_inc.severity)}
-                    <span style='font-size: 20px; font-weight: 700; color: #F8FAFC; margin-left: 10px;'>{selected_inc.title}</span>
+                    <span style='font-size: 20px; font-weight: 700; color: var(--text-primary); margin-left: 10px;'>{selected_inc.title}</span>
                     <span style='margin-left: 10px;'><code class='mono-id'>{selected_inc.incident_id}</code></span>
                 </div>
                 <div>
-                    <span style='color: #94A3B8; font-size: 13px;'>Risk: <strong style='color: #EF4444; font-size: 16px;'>{selected_inc.risk_score} / 100</strong></span>
-                    <span style='color: #64748B; margin: 0 8px;'>|</span>
-                    <span style='color: #94A3B8; font-size: 13px;'>Confidence: <strong style='color: #38BDF8; font-size: 16px;'>{int(selected_inc.confidence * 100)}%</strong></span>
+                    <span style='color: var(--text-muted); font-size: 13px;'>Risk: <strong style='color: var(--critical-color); font-size: 16px;'>{selected_inc.risk_score} / 100</strong></span>
+                    <span style='color: var(--text-dim); margin: 0 8px;'>|</span>
+                    <span style='color: var(--text-muted); font-size: 13px;'>Confidence: <strong style='color: var(--primary-accent); font-size: 16px;'>{int(selected_inc.confidence * 100)}%</strong></span>
                 </div>
             </div>
             <div class='attack-chain-bar' style='margin-top: 12px; margin-bottom: 0;'>
-                <span style='color: #94A3B8; font-size: 11px; font-weight: 600; text-transform: uppercase;'>Entities:</span>
+                <span style='color: var(--text-muted); font-size: 11px; font-weight: 600; text-transform: uppercase;'>Entities:</span>
                 <span class='chain-node'>👤 {", ".join(selected_inc.affected_users) or 'N/A'}</span>
                 <span class='chain-arrow'>➔</span>
                 <span class='chain-node'>💻 {", ".join(selected_inc.affected_devices) or 'N/A'}</span>
@@ -729,13 +896,13 @@ elif nav_selection == "🚨 Incidents":
             status = match[0].status if match else "insufficient evidence"
             
             if status == "confirmed":
-                col_code = "#22C55E"
+                col_code = "var(--success-color)"
                 icon_sym = "✓ CONFIRMED"
             elif status == "suspected":
-                col_code = "#F59E0B"
+                col_code = "var(--medium-color)"
                 icon_sym = "? SUSPECTED"
             else:
-                col_code = "#64748B"
+                col_code = "var(--text-dim)"
                 icon_sym = "— INSUFFICIENT EVIDENCE"
 
             with compass_cols[idx]:
@@ -760,11 +927,11 @@ elif nav_selection == "🚨 Incidents":
         with t_story:
             if selected_inc.attack_story:
                 st.markdown("#### What Happened")
-                st.markdown(f"<div style='background-color: #172033; padding: 14px; border-radius: 6px; border: 1px solid #263244; font-size: 14px; line-height: 1.6;'>{selected_inc.attack_story.what_happened}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background-color: var(--bg-elevated); padding: 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 14px; line-height: 1.6; color: var(--text-secondary);'>{selected_inc.attack_story.what_happened}</div>", unsafe_allow_html=True)
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown("#### Why It Matters")
-                st.markdown(f"<div style='background-color: #172033; padding: 14px; border-radius: 6px; border: 1px solid #263244; font-size: 14px; line-height: 1.6;'>{selected_inc.attack_story.why_it_matters}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background-color: var(--bg-elevated); padding: 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 14px; line-height: 1.6; color: var(--text-secondary);'>{selected_inc.attack_story.why_it_matters}</div>", unsafe_allow_html=True)
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.caption(f"Cryptographic Attack Fingerprint: `{selected_inc.attack_fingerprint}`")
@@ -773,17 +940,17 @@ elif nav_selection == "🚨 Incidents":
             st.markdown(f"##### Corroborating Evidence Items ({len(selected_inc.evidence_items)})")
             for evd in selected_inc.evidence_items:
                 st.markdown(f"""
-                <div style='background-color: #172033; border: 1px solid #263244; border-radius: 6px; padding: 12px; margin-bottom: 10px;'>
+                <div style='background-color: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 10px;'>
                     <div style='display: flex; justify-content: space-between; align-items: center;'>
                         <div>
                             <span class='mono-id'>{evd.evidence_id}</span>
-                            <span style='margin-left: 8px; font-weight: 600; color: #F8FAFC;'>{evd.event_type}</span>
-                            <span style='color: #64748B; margin-left: 8px;'>({evd.event_id})</span>
+                            <span style='margin-left: 8px; font-weight: 600; color: var(--text-primary);'>{evd.event_type}</span>
+                            <span style='color: var(--text-dim); margin-left: 8px;'>({evd.event_id})</span>
                         </div>
-                        <div style='font-size: 12px; color: #94A3B8;'>{evd.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}</div>
+                        <div style='font-size: 12px; color: var(--text-muted);'>{evd.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}</div>
                     </div>
-                    <div style='font-size: 13px; color: #E2E8F0; margin-top: 6px;'>{evd.explanation}</div>
-                    <div style='font-size: 11px; color: #64748B; margin-top: 6px;'>
+                    <div style='font-size: 13px; color: var(--text-secondary); margin-top: 6px;'>{evd.explanation}</div>
+                    <div style='font-size: 11px; color: var(--text-dim); margin-top: 6px;'>
                         User: <code class='mono-id'>{evd.user_id}</code> | Host: <code class='mono-id'>{evd.device_id}</code> | Target: <code class='mono-id'>{evd.file_path or evd.usb_id or evd.destination_ip or 'N/A'}</code>
                     </div>
                 </div>
@@ -874,7 +1041,7 @@ elif nav_selection == "⏪ Attack Replay":
                     st.session_state.replay_step = 0
                     st.rerun()
             with c_counter:
-                st.markdown(f"<div style='padding-top: 6px; font-size: 14px; color: #94A3B8;'>Timeline Step: <strong style='color: #38BDF8;'>{curr_step + 1} of {len(evts)}</strong></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='padding-top: 6px; font-size: 14px; color: var(--text-muted);'>Timeline Step: <strong style='color: var(--primary-accent);'>{curr_step + 1} of {len(evts)}</strong></div>", unsafe_allow_html=True)
 
             # Timeline Progress
             progress_val = (curr_step + 1) / max(1, len(evts))
@@ -896,20 +1063,20 @@ elif nav_selection == "⏪ Attack Replay":
 
             for i, e in enumerate(sub_evts):
                 is_active = (i == curr_step)
-                border_style = "border: 1px solid #EF4444; background-color: #1E1B4B;" if is_active else "border: 1px solid #263244; background-color: #111827;"
-                dot_color = "#EF4444" if is_active else "#38BDF8"
+                border_style = f"border: 1px solid var(--critical-color); background-color: var(--replay-active-bg);" if is_active else f"border: 1px solid var(--border-color); background-color: var(--replay-inactive-bg);"
+                dot_color = "var(--critical-color)" if is_active else "var(--primary-accent)"
 
                 st.markdown(f"""
-                <div style='{border_style} border-radius: 8px; padding: 14px; margin-bottom: 10px;'>
+                <div style='{border_style} border-radius: 8px; padding: 14px; margin-bottom: 10px; box-shadow: {T['card_shadow']};'>
                     <div style='display: flex; justify-content: space-between; align-items: center;'>
-                        <div style='font-size: 14px; font-weight: 700; color: #F8FAFC;'>
+                        <div style='font-size: 14px; font-weight: 700; color: var(--text-primary);'>
                             <span style='color: {dot_color}; font-size: 16px; margin-right: 6px;'>●</span>
-                            Step {i+1}: {e.event_type} <span style='font-weight: 400; color: #94A3B8;'>(<code class='mono-id'>{e.event_id}</code>)</span>
+                            Step {i+1}: {e.event_type} <span style='font-weight: 400; color: var(--text-muted);'>(<code class='mono-id'>{e.event_id}</code>)</span>
                         </div>
-                        <div style='font-size: 12px; color: #94A3B8;'><code class='mono-id'>{e.timestamp.strftime('%H:%M:%S UTC')}</code></div>
+                        <div style='font-size: 12px; color: var(--text-muted);'><code class='mono-id'>{e.timestamp.strftime('%H:%M:%S UTC')}</code></div>
                     </div>
-                    <div style='font-size: 13px; color: #E2E8F0; margin-top: 6px; line-height: 1.5;'>{e.explanation}</div>
-                    <div style='font-size: 11px; color: #64748B; margin-top: 8px;'>
+                    <div style='font-size: 13px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;'>{e.explanation}</div>
+                    <div style='font-size: 11px; color: var(--text-dim); margin-top: 8px;'>
                         Entity Lineage: User <code class='mono-id'>{e.user_id}</code> ➔ Host <code class='mono-id'>{e.device_id}</code> ➔ Target <code class='mono-id'>{e.file_path or e.usb_id or e.destination_ip or 'N/A'}</code>
                     </div>
                 </div>
@@ -930,18 +1097,18 @@ elif nav_selection == "🕸️ Attack Graph":
         gdata = inc.graph_data
 
         # Graph Legend
-        st.markdown("""
-        <div style='display: flex; gap: 16px; flex-wrap: wrap; background-color: #111827; padding: 10px 14px; border-radius: 6px; border: 1px solid #263244; margin-bottom: 16px; font-size: 12px;'>
-            <span style='color: #94A3B8; font-weight: 600;'>ENTITY NODES:</span>
+        st.markdown(f"""
+        <div style='display: flex; gap: 16px; flex-wrap: wrap; background-color: var(--bg-surface); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 16px; font-size: 12px; box-shadow: {T['card_shadow']};'>
+            <span style='color: var(--text-muted); font-weight: 600;'>ENTITY NODES:</span>
             <span><span style='color: #38BDF8;'>●</span> User</span>
             <span><span style='color: #A855F7;'>●</span> Device</span>
             <span><span style='color: #F97316;'>●</span> IP Address</span>
             <span><span style='color: #EAB308;'>●</span> Application</span>
             <span><span style='color: #EF4444;'>●</span> Sensitive File</span>
             <span><span style='color: #EC4899;'>●</span> Rogue USB</span>
-            <span style='color: #64748B;'>|</span>
-            <span style='color: #94A3B8; font-weight: 600;'>EDGES:</span>
-            <span style='color: #64748B;'>— Causal Interaction</span>
+            <span style='color: var(--text-dim);'>|</span>
+            <span style='color: var(--text-muted); font-weight: 600;'>EDGES:</span>
+            <span style='color: var(--text-dim);'>— Causal Interaction</span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -964,7 +1131,7 @@ elif nav_selection == "🕸️ Attack Graph":
 
         edge_trace = go.Scatter(
             x=edge_x, y=edge_y,
-            line=dict(width=1.5, color='#334155'),
+            line=dict(width=1.5, color=T['graph_edge']),
             hoverinfo='none',
             mode='lines'
         )
@@ -986,11 +1153,11 @@ elif nav_selection == "🕸️ Attack Graph":
             hoverinfo='text',
             text=node_text,
             textposition="top center",
-            textfont=dict(color='#E2E8F0', size=11),
+            textfont=dict(color=T['graph_text'], size=11),
             marker=dict(
                 color=node_colors,
                 size=24,
-                line=dict(width=2, color='#1E293B')
+                line=dict(width=2, color=T['graph_node_border'])
             )
         )
 
@@ -1000,8 +1167,8 @@ elif nav_selection == "🕸️ Attack Graph":
                 showlegend=False,
                 hovermode='closest',
                 margin=dict(b=20, l=20, r=20, t=20),
-                paper_bgcolor='#0B1020',
-                plot_bgcolor='#0B1020',
+                paper_bgcolor=T['graph_bg'],
+                plot_bgcolor=T['graph_bg'],
                 xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                 yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
             )
