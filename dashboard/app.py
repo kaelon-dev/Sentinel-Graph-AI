@@ -5,6 +5,7 @@ for explainable attack-story reconstruction and temporal graph analytics.
 Supports dual-theme switching: Dark SOC Command Mode and Light Enterprise Analyst Mode.
 """
 import json
+import textwrap
 import time
 from datetime import datetime
 from pathlib import Path
@@ -22,7 +23,7 @@ from sentinelgraph.reporting.explanations import NarrativeExplainer
 from sentinelgraph.evaluation.metrics import EvaluationMetrics
 
 # -----------------------------------------------------------------------------
-# 1. PAGE CONFIGURATION & DUAL THEME SPECIFICATION
+# 1. PAGE CONFIGURATION & STATE INITIALIZATION
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title=f"{__app_name__} — Threat Intelligence Command Center",
@@ -30,6 +31,13 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Initialize Session State Keys for 1-Click Instant Navigation
+if "theme_mode_key" not in st.session_state:
+    st.session_state.theme_mode_key = "🌙 Dark SOC"
+
+if "nav_destination_key" not in st.session_state:
+    st.session_state.nav_destination_key = "🛰️ Command Center"
 
 # Design System Token Palettes (Dark SOC vs. Light Enterprise Analyst)
 THEMES: Dict[str, Dict[str, str]] = {
@@ -75,74 +83,92 @@ THEMES: Dict[str, Dict[str, str]] = {
         "replay_inactive_bg": "#111827",
         "replay_inactive_border": "#263244",
         "input_bg": "#172033",
+        "radio_border": "#475569",
     },
     "☀️ Light Enterprise": {
-        "bg_canvas": "#FAF8FF",
+        "bg_canvas": "#F8FAFC",
         "bg_surface": "#FFFFFF",
-        "bg_elevated": "#F2F3FF",
-        "bg_elevated_subtle": "#EAEDFF",
-        "border_color": "#D2D9F4",
-        "border_subtle": "#E2E7FF",
-        "text_primary": "#131B2E",
-        "text_secondary": "#283044",
+        "bg_elevated": "#F1F5F9",
+        "bg_elevated_subtle": "#E2E8F0",
+        "border_color": "#CBD5E1",
+        "border_subtle": "#E2E8F0",
+        "text_primary": "#0F172A",
+        "text_secondary": "#1E293B",
         "text_muted": "#475569",
-        "text_dim": "#707881",
-        "primary_accent": "#006194",
-        "primary_subtle": "#CCE5FF",
-        "critical_color": "#BA1A1A",
-        "critical_bg": "#FFDAD6",
-        "critical_border": "#FFB4AB",
-        "high_color": "#C2410C",
-        "high_bg": "#FFEDD5",
-        "high_border": "#FED7AA",
-        "medium_color": "#B45309",
-        "medium_bg": "#FEF3C7",
-        "medium_border": "#FDE68A",
-        "low_color": "#006194",
-        "low_bg": "#E0F2FE",
+        "text_dim": "#64748B",
+        "primary_accent": "#0284C7",
+        "primary_subtle": "#E0F2FE",
+        "critical_color": "#DC2626",
+        "critical_bg": "#FEF2F2",
+        "critical_border": "#FECACA",
+        "high_color": "#EA580C",
+        "high_bg": "#FFF7ED",
+        "high_border": "#FFEDD5",
+        "medium_color": "#D97706",
+        "medium_bg": "#FFFBEB",
+        "medium_border": "#FEF3C7",
+        "low_color": "#0284C7",
+        "low_bg": "#F0F9FF",
         "low_border": "#BAE6FD",
-        "success_color": "#15803D",
-        "success_bg": "#DCFCE7",
+        "success_color": "#16A34A",
+        "success_bg": "#F0FDF4",
         "success_border": "#BBF7D0",
-        "primary_card_gradient": "linear-gradient(135deg, #FFFFFF 0%, #F2F3FF 100%)",
-        "primary_card_border": "#006194",
-        "card_shadow": "0 2px 12px rgba(19, 27, 46, 0.06)",
-        "code_bg": "rgba(0, 97, 148, 0.08)",
-        "code_text": "#006194",
-        "graph_bg": "#FAF8FF",
-        "graph_edge": "#BFC7D2",
-        "graph_text": "#131B2E",
+        "primary_card_gradient": "linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)",
+        "primary_card_border": "#0284C7",
+        "card_shadow": "0 2px 10px rgba(15, 23, 42, 0.06)",
+        "code_bg": "rgba(2, 132, 199, 0.08)",
+        "code_text": "#0284C7",
+        "graph_bg": "#F8FAFC",
+        "graph_edge": "#CBD5E1",
+        "graph_text": "#0F172A",
         "graph_node_border": "#FFFFFF",
-        "replay_active_bg": "#FFDAD6",
-        "replay_active_border": "#BA1A1A",
+        "replay_active_bg": "#FEF2F2",
+        "replay_active_border": "#DC2626",
         "replay_inactive_bg": "#FFFFFF",
-        "replay_inactive_border": "#D2D9F4",
-        "input_bg": "#F2F3FF",
+        "replay_inactive_border": "#CBD5E1",
+        "input_bg": "#FFFFFF",
+        "radio_border": "#94A3B8",
     }
 }
 
 # -----------------------------------------------------------------------------
-# 2. SIDEBAR CONFIGURATION & THEME TOGGLE
+# 2. SIDEBAR HEADER & 1-CLICK THEME SWITCHER
 # -----------------------------------------------------------------------------
-st.sidebar.markdown(f"### 🛡️ {__app_name__}")
-st.sidebar.caption(f"**Enterprise Threat Intelligence** · v{__version__}")
+# Lift sidebar title up to top
+st.sidebar.markdown(f"""
+<div style='margin-top: -15px; margin-bottom: 2px;'>
+    <div style='font-size: 20px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;'>
+        <span>🛡️</span> <span>{__app_name__}</span>
+    </div>
+    <div style='font-size: 12px; color: var(--text-muted); margin-top: 2px;'>
+        Enterprise Threat Intelligence · <strong>v{__version__}</strong>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# Theme Selector in Sidebar
-if "theme_mode" not in st.session_state:
-    st.session_state.theme_mode = "🌙 Dark SOC"
-
+# 1-Click Theme Selector
 theme_selection = st.sidebar.radio(
     "Console Theme Mode",
     ["🌙 Dark SOC", "☀️ Light Enterprise"],
-    index=0 if st.session_state.theme_mode == "🌙 Dark SOC" else 1,
+    key="theme_mode_key",
     horizontal=True,
     help="Toggle between Dark SOC Command Center and Light Enterprise Analyst Mode"
 )
-st.session_state.theme_mode = theme_selection
 T = THEMES[theme_selection]
 
+
+# Helper to cleanly render HTML without markdown code-block conversion bugs
+def render_html(html_str: str) -> None:
+    """Render pure HTML without Markdown converting indented lines to code blocks."""
+    dedented = textwrap.dedent(html_str).strip()
+    if hasattr(st, "html"):
+        st.html(dedented)
+    else:
+        st.markdown(dedented, unsafe_allow_html=True)
+
+
 # Inject Dynamic CSS matching current theme tokens
-st.markdown(f"""
+render_html(f"""
 <style>
     :root {{
         --bg-canvas: {T['bg_canvas']};
@@ -176,6 +202,8 @@ st.markdown(f"""
         --code-text: {T['code_text']};
         --replay-active-bg: {T['replay_active_bg']};
         --replay-inactive-bg: {T['replay_inactive_bg']};
+        --input-bg: {T['input_bg']};
+        --radio-border: {T['radio_border']};
     }}
 
     /* Global Canvas */
@@ -188,38 +216,128 @@ st.markdown(f"""
     #MainMenu, .stDeployButton {{visibility: hidden !important;}}
     header {{background-color: transparent !important;}}
 
+    /* Lift Main Page Title Upwards */
+    .block-container {{
+        padding-top: 1.2rem !important;
+        padding-bottom: 2rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }}
+
     /* Sidebar Refinement */
     [data-testid="stSidebar"] {{
         background-color: var(--bg-surface) !important;
         border-right: 1px solid var(--border-color) !important;
-        padding-top: 1rem;
+    }}
+    [data-testid="stSidebarContent"] {{
+        padding-top: 0.5rem !important;
+    }}
+    [data-testid="stSidebarUserContent"] {{
+        padding-top: 0.25rem !important;
     }}
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] label {{
         color: var(--text-primary) !important;
     }}
     
-    /* Prominent Sidebar Expand Button (Always discoverable) */
+    /* Return Arrow (Sidebar Collapse Button <<) - Prominently Visible & Dark */
+    [data-testid="stSidebarCollapseButton"] button {{
+        background-color: var(--bg-elevated) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 6px !important;
+        padding: 4px 6px !important;
+        opacity: 1 !important;
+    }}
+    [data-testid="stSidebarCollapseButton"] svg {{
+        fill: var(--text-primary) !important;
+        stroke: var(--text-primary) !important;
+        color: var(--text-primary) !important;
+        width: 20px !important;
+        height: 20px !important;
+        opacity: 1 !important;
+    }}
+
+    /* Prominent Sidebar Expand Button (>> when closed) */
     [data-testid="collapsedControl"] {{
         display: flex !important;
         visibility: visible !important;
         opacity: 1 !important;
         z-index: 1000000 !important;
         position: fixed !important;
-        top: 12px !important;
-        left: 12px !important;
-        background-color: var(--bg-elevated) !important;
-        color: var(--primary-accent) !important;
-        border: 1px solid var(--primary-accent) !important;
+        top: 10px !important;
+        left: 10px !important;
+        background-color: var(--bg-surface) !important;
+        color: var(--text-primary) !important;
+        border: 2px solid var(--primary-accent) !important;
         border-radius: 6px !important;
-        padding: 5px 9px !important;
-        box-shadow: 0 0 12px rgba(56, 189, 248, 0.3) !important;
+        padding: 6px 10px !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
         cursor: pointer !important;
     }}
     [data-testid="collapsedControl"] svg {{
-        fill: var(--primary-accent) !important;
-        stroke: var(--primary-accent) !important;
-        width: 20px !important;
-        height: 20px !important;
+        fill: var(--text-primary) !important;
+        stroke: var(--text-primary) !important;
+        color: var(--text-primary) !important;
+        width: 22px !important;
+        height: 22px !important;
+    }}
+
+    /* Clean Dropdown Menus (Selectboxes) */
+    div[data-baseweb="select"] > div {{
+        background-color: var(--input-bg) !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-primary) !important;
+        border-radius: 6px !important;
+    }}
+    div[data-baseweb="select"] span {{
+        color: var(--text-primary) !important;
+    }}
+    div[data-baseweb="select"] svg {{
+        fill: var(--text-primary) !important;
+    }}
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div,
+    div[data-baseweb="popover"] ul {{
+        background-color: var(--bg-surface) !important;
+        border: 1px solid var(--border-color) !important;
+    }}
+    div[data-baseweb="popover"] li {{
+        background-color: var(--bg-surface) !important;
+        color: var(--text-primary) !important;
+    }}
+    div[data-baseweb="popover"] li:hover {{
+        background-color: var(--bg-elevated) !important;
+        color: var(--primary-accent) !important;
+    }}
+
+    /* Radio Buttons & Checkboxes Colors */
+    [data-testid="stRadio"] label > div:first-child {{
+        background-color: var(--input-bg) !important;
+        border: 1.5px solid var(--radio-border) !important;
+    }}
+    [data-testid="stRadio"] label:hover > div:first-child {{
+        border-color: var(--primary-accent) !important;
+    }}
+    [data-testid="stRadio"] label input:checked + div,
+    [data-testid="stRadio"] [aria-checked="true"] > div:first-child {{
+        border-color: var(--primary-accent) !important;
+        background-color: var(--input-bg) !important;
+    }}
+    [data-testid="stRadio"] [aria-checked="true"] > div:first-child > div {{
+        background-color: var(--primary-accent) !important;
+    }}
+
+    [data-testid="stCheckbox"] label > div:first-child {{
+        background-color: var(--input-bg) !important;
+        border: 1.5px solid var(--radio-border) !important;
+        border-radius: 4px !important;
+    }}
+    [data-testid="stCheckbox"] label:hover > div:first-child {{
+        border-color: var(--primary-accent) !important;
+    }}
+    [data-testid="stCheckbox"] label input:checked + div,
+    [data-testid="stCheckbox"] [aria-checked="true"] > div:first-child {{
+        background-color: var(--primary-accent) !important;
+        border-color: var(--primary-accent) !important;
     }}
 
     /* Top Shell Navigation Bar */
@@ -271,7 +389,7 @@ st.markdown(f"""
         padding: 14px 16px;
         text-align: left;
         box-shadow: {T['card_shadow']};
-        transition: border-color 0.15s ease-in-out, transform 0.15s ease-in-out;
+        transition: border-color 0.15s ease-in-out;
     }}
     .metric-card:hover {{
         border-color: var(--primary-accent);
@@ -390,14 +508,14 @@ st.markdown(f"""
         flex-wrap: wrap;
         gap: 8px;
         padding: 10px 14px;
-        background-color: var(--bg-surface);
+        background-color: var(--bg-elevated);
         border: 1px solid var(--border-color);
         border-radius: 6px;
         margin: 14px 0;
         font-size: 13px;
     }}
     .chain-node {{
-        background-color: var(--bg-elevated);
+        background-color: var(--bg-surface);
         border: 1px solid var(--border-color);
         color: var(--text-primary);
         padding: 4px 10px;
@@ -407,6 +525,34 @@ st.markdown(f"""
     .chain-arrow {{
         color: var(--primary-accent);
         font-weight: 700;
+    }}
+
+    /* Threat Narrative Box (Executive SOC Alert - Replaces Terminal Leak) */
+    .threat-narrative-box {{
+        background-color: var(--bg-elevated);
+        border: 1px solid var(--border-color);
+        border-left: 4px solid var(--critical-color);
+        border-radius: 6px;
+        padding: 14px 16px;
+        margin-top: 14px;
+    }}
+    .threat-narrative-header {{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+    }}
+    .threat-narrative-tag {{
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--critical-color);
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }}
+    .threat-narrative-body {{
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--text-secondary);
     }}
 
     /* Attack Chain Compass Matrix */
@@ -509,7 +655,7 @@ st.markdown(f"""
         background-color: var(--primary-accent) !important;
     }}
 </style>
-""", unsafe_allow_html=True)
+""")
 
 # -----------------------------------------------------------------------------
 # 3. PIPELINE RUNNER & DATASET UTILITIES
@@ -547,7 +693,7 @@ def render_badge(severity: str) -> str:
 
 
 # -----------------------------------------------------------------------------
-# 4. SIDEBAR NAVIGATION
+# 4. SIDEBAR NAVIGATION (1-CLICK INSTANT SWITCHING)
 # -----------------------------------------------------------------------------
 st.sidebar.markdown("---")
 
@@ -564,7 +710,7 @@ selected_dataset = st.sidebar.selectbox(
 use_ext_window = "slow" in selected_dataset
 
 # Navigation Destinations (Organized by operational function)
-st.sidebar.markdown(f"<span style='font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;'>OPERATIONS</span>", unsafe_allow_html=True)
+render_html(f"<div style='font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px;'>OPERATIONS</div>")
 
 nav_options = [
     "🛰️ Command Center",
@@ -576,26 +722,23 @@ nav_options = [
     "📊 Evaluation"
 ]
 
-if "nav_destination" not in st.session_state:
-    st.session_state.nav_destination = nav_options[0]
-
+# 1-Click Operational Navigation using Direct Key Binding
 nav_selection = st.sidebar.radio(
     "Console Navigation",
     nav_options,
-    index=nav_options.index(st.session_state.nav_destination) if st.session_state.nav_destination in nav_options else 0,
+    key="nav_destination_key",
     label_visibility="collapsed"
 )
-st.session_state.nav_destination = nav_selection
 
 # System status in sidebar
 st.sidebar.markdown("---")
-st.sidebar.markdown(f"""
+render_html(f"""
 <div style='background-color: var(--bg-elevated); padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-color);'>
     <div style='font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;'>System Engine</div>
     <div style='font-size: 12px; color: var(--success-color); font-weight: 600; margin-top: 2px;'>● 100% Deterministic Local</div>
     <div style='font-size: 11px; color: var(--text-dim); margin-top: 4px;'>Zero Cloud Leakage · Air-Gapped</div>
 </div>
-""", unsafe_allow_html=True)
+""")
 
 # Load pipeline data
 try:
@@ -609,7 +752,7 @@ except Exception as e:
 # -----------------------------------------------------------------------------
 # 5. GLOBAL SOC HEADER
 # -----------------------------------------------------------------------------
-st.markdown(f"""
+render_html(f"""
 <div class='soc-header'>
     <div>
         <div class='soc-header-title'>🛡️ {__app_name__} <span style='font-weight: 400; color: var(--text-dim);'>|</span> <span style='font-size: 15px; color: var(--primary-accent);'>Threat Intelligence Command Center</span></div>
@@ -620,7 +763,7 @@ st.markdown(f"""
         <div style='font-size: 11px; color: var(--text-dim); margin-top: 4px;'>Run ID: <code class='mono-hash'>{analysis_result.run_id}</code></div>
     </div>
 </div>
-""", unsafe_allow_html=True)
+""")
 
 
 # -----------------------------------------------------------------------------
@@ -637,53 +780,53 @@ if nav_selection == "🛰️ Command Center":
     high_count = sum(1 for i in incidents if i.severity == "HIGH")
 
     with m1:
-        st.markdown(f"""
+        render_html(f"""
         <div class='metric-card'>
             <div class='metric-value'>{analysis_result.valid_event_count:,}</div>
             <div class='metric-label'>Events Analyzed</div>
             <div class='metric-subtext'>Ingested & Normalized</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
     with m2:
-        st.markdown(f"""
+        render_html(f"""
         <div class='metric-card'>
             <div class='metric-value' style='color: var(--primary-accent);'>{len(analysis_result.signals_detected)}</div>
             <div class='metric-label'>Security Signals</div>
             <div class='metric-subtext'>Rule & Anomaly Matches</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
     with m3:
-        st.markdown(f"""
+        render_html(f"""
         <div class='metric-card'>
             <div class='metric-value'>{len(incidents)}</div>
             <div class='metric-label'>Attack Stories</div>
             <div class='metric-subtext'>Correlated Clusters</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
     with m4:
-        st.markdown(f"""
+        render_html(f"""
         <div class='metric-card'>
             <div class='metric-value' style='color: {"var(--critical-color)" if crit_count > 0 else "var(--text-dim)"};'>{crit_count}</div>
             <div class='metric-label'>Critical Incidents</div>
             <div class='metric-subtext'>Multi-Stage Exfiltration</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
     with m5:
-        st.markdown(f"""
+        render_html(f"""
         <div class='metric-card'>
             <div class='metric-value' style='color: {"var(--high-color)" if high_count > 0 else "var(--text-dim)"};'>{high_count}</div>
             <div class='metric-label'>High Incidents</div>
             <div class='metric-subtext'>Unconfirmed / Staged</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
     with m6:
-        st.markdown(f"""
+        render_html(f"""
         <div class='metric-card'>
             <div class='metric-value' style='color: var(--success-color);'>0.00%</div>
             <div class='metric-label'>False Positive Rate</div>
             <div class='metric-subtext'>Zero Clean Alarms</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -696,7 +839,7 @@ if nav_selection == "🛰️ Command Center":
         dest_str = ", ".join(top_inc.affected_ips) or "External Host"
         what_happened_text = top_inc.attack_story.what_happened if top_inc.attack_story else "Multi-stage correlated sequence detected."
 
-        st.markdown(f"""
+        render_html(f"""
         <div class='primary-threat-card'>
             <div class='primary-threat-header'>
                 <div style='display: flex; align-items: center;'>
@@ -727,28 +870,31 @@ if nav_selection == "🛰️ Command Center":
                 <span class='chain-node' style='color: var(--critical-color); border-color: var(--critical-border);'>🎯 Exfiltrated Asset</span>
             </div>
 
-            <div style='margin-top: 14px;'>
-                <div style='font-size: 11px; font-weight: 700; color: var(--primary-accent); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;'>WHAT HAPPENED</div>
-                <div style='font-size: 14px; line-height: 1.6; color: var(--text-secondary);'>{what_happened_text}</div>
+            <div class='threat-narrative-box'>
+                <div class='threat-narrative-header'>
+                    <span class='threat-narrative-tag'>EXECUTIVE THREAT SUMMARY</span>
+                    <span style='font-size: 11px; color: var(--text-muted);'>Deterministic Graph Correlation</span>
+                </div>
+                <div class='threat-narrative-body'>{what_happened_text}</div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         # Prominent CTA button to drill down into the incident
         c_act1, c_act2 = st.columns([1, 4])
         with c_act1:
             if st.button("🚨 Investigate Incident", type="primary", use_container_width=True):
-                st.session_state.nav_destination = "🚨 Incidents"
+                st.session_state.nav_destination_key = "🚨 Incidents"
                 st.session_state.selected_inc_id = top_inc.incident_id
                 st.rerun()
     else:
-        st.markdown(f"""
+        render_html(f"""
         <div style='background-color: var(--bg-surface); border: 1px solid var(--success-color); border-radius: 8px; padding: 24px; text-align: center; box-shadow: {T['card_shadow']};'>
             <div style='font-size: 28px;'>🛡️</div>
             <div style='font-size: 18px; font-weight: 700; color: var(--success-color); margin-top: 8px;'>Zero Threats Detected</div>
             <div style='font-size: 13px; color: var(--text-muted); margin-top: 4px;'>Telemetry exhibits expected enterprise baseline operations. Zero false alarms generated.</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -756,7 +902,7 @@ if nav_selection == "🛰️ Command Center":
     col_sig, col_twin = st.columns(2)
 
     with col_sig:
-        st.markdown(f"""
+        render_html(f"""
         <div class='soc-surface-card'>
             <div class='soc-card-title'>⚡ Signal ➔ Story Consolidation</div>
             <div style='display: flex; align-items: center; justify-content: space-around; background-color: var(--bg-elevated); padding: 14px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 12px;'>
@@ -779,10 +925,10 @@ if nav_selection == "🛰️ Command Center":
                 Individual alerts flood SOC analysts with noise. SentinelGraph AI groups related authentication, access, and transfer signals across entities into one coherent forensic incident.
             </p>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
     with col_twin:
-        st.markdown(f"""
+        render_html(f"""
         <div class='soc-surface-card'>
             <div class='soc-card-title'>⚖️ Benign Twin Architecture</div>
             <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;'>
@@ -799,7 +945,7 @@ if nav_selection == "🛰️ Command Center":
                 Both workflows share structural steps, but entity baseline profiling and sensitivity gating prevent false alarms on legitimate business operations.
             </p>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
     # 4. Recent / Important Incidents Roster
     if len(incidents) > 1:
@@ -859,7 +1005,7 @@ elif nav_selection == "🚨 Incidents":
         st.markdown("---")
 
         # 3. Incident Identity Header
-        st.markdown(f"""
+        render_html(f"""
         <div style='background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 18px; margin-bottom: 18px; box-shadow: {T['card_shadow']};'>
             <div style='display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;'>
                 <div>
@@ -884,7 +1030,7 @@ elif nav_selection == "🚨 Incidents":
                 <span class='chain-node'>💾 {", ".join(selected_inc.affected_usb_devices) or 'Network Egress'}</span>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         # 4. Attack Chain Compass (Visual Kill-Chain Progression)
         st.markdown("##### 🧭 Attack Chain Compass")
@@ -906,12 +1052,12 @@ elif nav_selection == "🚨 Incidents":
                 icon_sym = "— INSUFFICIENT EVIDENCE"
 
             with compass_cols[idx]:
-                st.markdown(f"""
+                render_html(f"""
                 <div class='compass-stage-card' style='border-top: 3px solid {col_code};'>
                     <div class='compass-stage-title'>{sname}</div>
                     <div class='compass-stage-status' style='color: {col_code};'>{icon_sym}</div>
                 </div>
-                """, unsafe_allow_html=True)
+                """)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -927,11 +1073,11 @@ elif nav_selection == "🚨 Incidents":
         with t_story:
             if selected_inc.attack_story:
                 st.markdown("#### What Happened")
-                st.markdown(f"<div style='background-color: var(--bg-elevated); padding: 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 14px; line-height: 1.6; color: var(--text-secondary);'>{selected_inc.attack_story.what_happened}</div>", unsafe_allow_html=True)
+                render_html(f"<div style='background-color: var(--bg-elevated); padding: 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 14px; line-height: 1.6; color: var(--text-secondary);'>{selected_inc.attack_story.what_happened}</div>")
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown("#### Why It Matters")
-                st.markdown(f"<div style='background-color: var(--bg-elevated); padding: 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 14px; line-height: 1.6; color: var(--text-secondary);'>{selected_inc.attack_story.why_it_matters}</div>", unsafe_allow_html=True)
+                render_html(f"<div style='background-color: var(--bg-elevated); padding: 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 14px; line-height: 1.6; color: var(--text-secondary);'>{selected_inc.attack_story.why_it_matters}</div>")
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.caption(f"Cryptographic Attack Fingerprint: `{selected_inc.attack_fingerprint}`")
@@ -939,7 +1085,7 @@ elif nav_selection == "🚨 Incidents":
         with t_evidence:
             st.markdown(f"##### Corroborating Evidence Items ({len(selected_inc.evidence_items)})")
             for evd in selected_inc.evidence_items:
-                st.markdown(f"""
+                render_html(f"""
                 <div style='background-color: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 10px;'>
                     <div style='display: flex; justify-content: space-between; align-items: center;'>
                         <div>
@@ -954,7 +1100,7 @@ elif nav_selection == "🚨 Incidents":
                         User: <code class='mono-id'>{evd.user_id}</code> | Host: <code class='mono-id'>{evd.device_id}</code> | Target: <code class='mono-id'>{evd.file_path or evd.usb_id or evd.destination_ip or 'N/A'}</code>
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
+                """)
 
         with t_score:
             st.markdown("#### Deterministic Score Contributions")
@@ -1041,7 +1187,7 @@ elif nav_selection == "⏪ Attack Replay":
                     st.session_state.replay_step = 0
                     st.rerun()
             with c_counter:
-                st.markdown(f"<div style='padding-top: 6px; font-size: 14px; color: var(--text-muted);'>Timeline Step: <strong style='color: var(--primary-accent);'>{curr_step + 1} of {len(evts)}</strong></div>", unsafe_allow_html=True)
+                render_html(f"<div style='padding-top: 6px; font-size: 14px; color: var(--text-muted);'>Timeline Step: <strong style='color: var(--primary-accent);'>{curr_step + 1} of {len(evts)}</strong></div>")
 
             # Timeline Progress
             progress_val = (curr_step + 1) / max(1, len(evts))
@@ -1066,7 +1212,7 @@ elif nav_selection == "⏪ Attack Replay":
                 border_style = f"border: 1px solid var(--critical-color); background-color: var(--replay-active-bg);" if is_active else f"border: 1px solid var(--border-color); background-color: var(--replay-inactive-bg);"
                 dot_color = "var(--critical-color)" if is_active else "var(--primary-accent)"
 
-                st.markdown(f"""
+                render_html(f"""
                 <div style='{border_style} border-radius: 8px; padding: 14px; margin-bottom: 10px; box-shadow: {T['card_shadow']};'>
                     <div style='display: flex; justify-content: space-between; align-items: center;'>
                         <div style='font-size: 14px; font-weight: 700; color: var(--text-primary);'>
@@ -1080,7 +1226,7 @@ elif nav_selection == "⏪ Attack Replay":
                         Entity Lineage: User <code class='mono-id'>{e.user_id}</code> ➔ Host <code class='mono-id'>{e.device_id}</code> ➔ Target <code class='mono-id'>{e.file_path or e.usb_id or e.destination_ip or 'N/A'}</code>
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
+                """)
 
 
 # =============================================================================
@@ -1097,7 +1243,7 @@ elif nav_selection == "🕸️ Attack Graph":
         gdata = inc.graph_data
 
         # Graph Legend
-        st.markdown(f"""
+        render_html(f"""
         <div style='display: flex; gap: 16px; flex-wrap: wrap; background-color: var(--bg-surface); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 16px; font-size: 12px; box-shadow: {T['card_shadow']};'>
             <span style='color: var(--text-muted); font-weight: 600;'>ENTITY NODES:</span>
             <span><span style='color: #38BDF8;'>●</span> User</span>
@@ -1110,7 +1256,7 @@ elif nav_selection == "🕸️ Attack Graph":
             <span style='color: var(--text-muted); font-weight: 600;'>EDGES:</span>
             <span style='color: var(--text-dim);'>— Causal Interaction</span>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         G = nx.DiGraph()
         for node in gdata.nodes:
@@ -1217,7 +1363,7 @@ elif nav_selection == "📋 Evidence Ledger":
                     st.markdown(f"**Evidence Strength:** `{evd.strength * 100:.0f}%`")
                 
                 st.markdown(f"**Forensic Explanation:** {evd.explanation}")
-                st.markdown(f"**SHA-256 Hash:** <code class='mono-hash'>{evd.fingerprint}</code>", unsafe_allow_html=True)
+                render_html(f"<div><strong>SHA-256 Hash:</strong> <code class='mono-hash'>{evd.fingerprint}</code></div>")
                 
                 st.markdown("###### Normalized JSON Telemetry")
                 st.json(evd.normalized_json)
