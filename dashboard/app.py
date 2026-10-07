@@ -31,7 +31,33 @@ st.markdown("""
         color: #E2E8F0;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    header, footer {visibility: hidden;}
+    footer {visibility: hidden;}
+    #MainMenu, .stDeployButton {visibility: hidden !important;}
+    header {background-color: transparent !important;}
+
+    /* Ensure sidebar expand arrow is ALWAYS prominently visible when collapsed */
+    [data-testid="collapsedControl"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 1000000 !important;
+        position: fixed !important;
+        top: 12px !important;
+        left: 12px !important;
+        background-color: #0284C7 !important;
+        color: #FFFFFF !important;
+        border: 2px solid #38BDF8 !important;
+        border-radius: 8px !important;
+        padding: 6px 10px !important;
+        box-shadow: 0 0 15px rgba(56, 189, 248, 0.7) !important;
+        cursor: pointer !important;
+    }
+    [data-testid="collapsedControl"] svg {
+        fill: #FFFFFF !important;
+        stroke: #FFFFFF !important;
+        width: 22px !important;
+        height: 22px !important;
+    }
     [data-testid="stSidebar"] {
         background-color: #111827;
         border-right: 1px solid #1F2937;
@@ -103,6 +129,25 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+import streamlit.components.v1 as components
+
+# Auto-reopen sidebar if previously collapsed in browser state
+components.html("""
+<script>
+    function ensureSidebarOpen() {
+        try {
+            const doc = window.parent.document;
+            const collapseBtn = doc.querySelector('[data-testid="collapsedControl"] button') || doc.querySelector('[data-testid="collapsedControl"]');
+            if (collapseBtn) {
+                collapseBtn.click();
+            }
+        } catch (e) {}
+    }
+    setTimeout(ensureSidebarOpen, 150);
+    setTimeout(ensureSidebarOpen, 600);
+</script>
+""", height=0, width=0)
 
 
 @st.cache_resource
